@@ -30,7 +30,7 @@ class QuadraticSimplex():
     def create_tableau_dimension(self, initial_tableau, dimension):
         tableau_dimension = deepcopy(initial_tableau)
         tableau_dimension.dimension = dimension
-        tableau_dimension.pivot_column = dimension
+        tableau_dimension.pivot_column_index = dimension
         return tableau_dimension
 
     def get_initial_tableau(self):
@@ -57,8 +57,8 @@ class QuadraticSimplex():
         updating_dimension = self.get_updating_dimension()
 
     def get_updating_dimension(self):
-        theta_min_list = [tableau.get_theta_min() for tableau in self.tableaux]
-        print(theta_min_list)
+        potential_profit_list = [tableau.get_potential_profit() for tableau in self.tableaux]
+        print(potential_profit_list)
 
     def output_problem_constraints(self):
         print("Problem constraints")

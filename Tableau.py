@@ -10,13 +10,15 @@ class Tableau():
     Outputs basic and non-basic variables, profit, values, and the whole tableau
     """
 
+    zero = 0.0001
+
     def __init__(self, dimension, constraint_matrix, constraint_vector, profit_vector):
         self.dimension = dimension
         self.constraint_matrix = constraint_matrix
         self.constraint_vector = constraint_vector
         self.profit_vector = profit_vector
         self.initialise_tableau_from_input_data()
-        self.pivot_column = None
+        self.pivot_column_index = None
 
     def initialise_tableau_from_input_data(self):
         self.set_dimensions()
@@ -49,10 +51,16 @@ class Tableau():
         self.profit = 0
         self.profit_row = np.hstack((self.profit_vector, self.profit))
 
-    def get_theta_min(self):
+    def get_potential_profit(self):
+        theta_list = self.get_theta_list()
+        return None
+
+    def get_theta_list(self):
+        pivot_column = self.tableau_body[:, self.pivot_column_index]
         print(self.values)
-        print(self.tableau_body[:, self.pivot_column])
-        return -1
+        print(pivot_column)
+        valid_rows = [self.values * pivot_column > self.zero]
+        return None
 
     def output_all(self):
         print(self)
