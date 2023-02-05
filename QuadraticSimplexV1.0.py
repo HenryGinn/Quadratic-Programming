@@ -22,7 +22,10 @@ class QuadraticSimplex():
 
     def set_initial_tableau(self):
         initial_profit_vector = self.get_initial_profit_vector()
-        self.initial_tableau = Tableau(self.constraint_matrix, self.constraint_vector, initial_profit_vector)
+        self.initial_tableau = Tableau(0, self.constraint_matrix, self.constraint_vector, initial_profit_vector)
+        self.initial_tableau.output_basic_and_non_basic_variables()
+        self.initial_tableau.output_values()
+        self.initial_tableau.output_tableau()
 
     def get_initial_profit_vector(self):
         profit_function_space = -1*np.ones(self.space_dimensions)
