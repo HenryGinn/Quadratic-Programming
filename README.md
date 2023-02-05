@@ -1,6 +1,6 @@
 # Quadratic-Programming
 
-################################ OVERVIEW ################################
+################################## OVERVIEW ##################################
 
 Implementation of a modified simplex algorithm to maximise x^Tx subject to Ax <= b. All variables are also non negative.
 
@@ -13,7 +13,7 @@ Formulation issues:
 
     3: If a constraint is required to hold as an equality it can be written as two inequalities as follows. c^Tx = b becomes c^Tx <= b and -c^Tx <= -b.
 
-################################ TERMINOLOGY ################################
+################################# TERMINOLOGY #################################
 
 Variable types:
     Space/spacial: these are variables like x, y, and z. There is one for each dimension of space we are working in. This will be referred to as n.
@@ -32,13 +32,13 @@ Other terms:
     Exiting variable: this is a basic variable that is becoming a non-basic variable. It is the variable given by the pivot column
     Entering variable: this is a non-basic variable that is becoming a basic variable. It is the variable given by the pivot row.
 
-################################ HOW BASIC VARIABLES DEFINE A VERTEX ################################
+##################### HOW BASIC VARIABLES DEFINE A VERTEX #####################
 
 Every slack variable has a constraint associated with it. We can also associate a constraint with the spatial variables in the following way: for the variable x, we have the constraint x >= 0. If a variable is non-zero, that means we are at a point where that constraint does not hold with equality - the variable has to be non zero to take up the slack. If a variable is non-basic, that means it is necessarily 0, and we are at a point on the constraint associated with that variable.
 
 In a 2D problem we start at (x, y) = (0, 0). At this point, we are touching the lines x=0 and y=0. If we were not touching the constraint x => 0 for example, then the variable x would necessarily be non-zero. The non-basic variables in this case are x and y. Warning: just because a constraint holds with equality, it does not mean the variable associated with it is non-basic. For example if there was a constraint given by x - y <= 0 we would still be starting at (0, 0) with x and y as non-basic variables. Writing the constraint in equation form with a slack variable, x - y + s = 0, we can see that at the origin s = 0 holds. This means that if the non-basic variables were x and s or y and s, we would also be at (0, 0). This happens when three or more constraints intersect at a point (or along a line, or in general, on a facet).
 
-################################ HOW THE QUADRATIC ALGORITHM WORKS ################################
+###################### HOW THE QUADRATIC ALGORITHM WORKS ######################
 
 We start off at the origin with a profit function given by the sum of all spatial variables. If the simplex algorithm was to be applied, there would be a choice of n different columns to have as the pivot column (one for each spatial dimension). This is because the profit is increased at the same rate for each of the variables. We split the problem into n, and initialise each of the new tableaux by picking a different pivot column. This is the same as asking the points to point in the directions of the different axes.
 
@@ -48,7 +48,7 @@ The point that has been chosen to be updated is then moved to it's new location.
 
 The process described in the previous two paragraphs is then repeated. When any pair of points has the same set of basic variables and has the same profit column (going in the same direction), they have converged to each other. They can be treated at one point from then on. Note that the angle at the origin between any pair of points is non-increasing - this implies that the solid angle is also non-increasing. When all points have converged to each other, the whole problem has converged.
 
-################################ COMPUTATION OF NEW LINEAR PROFIT FUNCTION ################################
+################## COMPUTATION OF NEW LINEAR PROFIT FUNCTION ##################
 
 1: Finding the line each point is moving on
     A line is defined by 2 vectors: a position vector, and a direction vector. A position vector can be found immediately by the position of the vertex where the point lies, and this is found by value of the spatial variables. These variables are either non-basic variables in which case they are 0, or they are basic variables and their values can be read directly off the tableau for that point.

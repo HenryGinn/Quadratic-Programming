@@ -3,9 +3,9 @@ import numpy as np
 class QuadraticSimplex():
 
     """
-    Each object is an optimisation problem with objective function x^Tx and
-    constraints Ax<=b. All variables must be positive and the origin must
-    be a feasible point.
+    Each object is an optimisation problem to maximise the objective function x^Tx subject to constraints Ax<=b. All variables must be positive and the origin must be a feasible point.
+
+    For more details on the algorithm, implementation, and formulation of quadratic problems into this form see the README document.
     """
 
     def __init__(self, constraint_matrix, constraint_vector):
