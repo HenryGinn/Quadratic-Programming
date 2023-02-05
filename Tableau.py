@@ -10,12 +10,13 @@ class Tableau():
     Outputs basic and non-basic variables, profit, values, and the whole tableau
     """
 
-    def __init__(self, ID, constraint_matrix, constraint_vector, profit_vector):
-        self.id = ID
+    def __init__(self, dimension, constraint_matrix, constraint_vector, profit_vector):
+        self.dimension = dimension
         self.constraint_matrix = constraint_matrix
         self.constraint_vector = constraint_vector
         self.profit_vector = profit_vector
         self.initialise_tableau_from_input_data()
+        self.pivot_column = None
 
     def initialise_tableau_from_input_data(self):
         self.set_dimensions()
@@ -38,16 +39,28 @@ class Tableau():
         self.basic_variables = np.array(range(self.space_dimensions, self.total_dimensions))
 
     def set_initial_tableau(self):
-        self.values = np.zeros(self.slack_dimensions)
+        self.values = np.copy(self.constraint_vector)
         self.set_initial_profit_data()
-        self.body = np.concatenate((self.constraint_matrix, np.identity(self.slack_dimensions)), axis=1)
-        self.tableau = np.concatenate((self.body, self.values.reshape(-1, 1)), axis=1)
+        self.tableau_body = np.concatenate((self.constraint_matrix, np.identity(self.slack_dimensions)), axis=1)
+        self.tableau = np.concatenate((self.tableau_body, self.values.reshape(-1, 1)), axis=1)
         self.tableau = np.vstack((self.tableau, self.profit_row))
-        self.output_vertex_position()
 
     def set_initial_profit_data(self):
         self.profit = 0
         self.profit_row = np.hstack((self.profit_vector, self.profit))
+
+    def get_theta_min(self):
+        print(self.values)
+        print(self.tableau_body[:, self.pivot_column])
+        return -1
+
+    def output_all(self):
+        print(self)
+        self.output_tableau()
+        self.output_basic_and_non_basic_variables()
+        self.output_values()
+        self.output_profit_information()
+        self.output_vertex_position()
 
     def output_basic_and_non_basic_variables(self):
         basic_variables_string = [str(round(value, 2)) for value in self.basic_variables]
@@ -86,9 +99,15 @@ class Tableau():
         else:
             value = 0
         return value
+
+    def output_profit_information(self):
+        print("Outputting profit information")
+        print(f"Profit: {self.profit}")
+        for non_basic_variable in self.non_basic_variables:
+            print(f"{non_basic_variable}: {self.profit_vector[non_basic_variable]}")
+        print("")
         
     def __str__(self):
-        string = ((f"ID: {self.id}\n"
-                   f"Profit: {self.profit}\n"
-                   f"Basic variables: {self.basic_variables}\n"))
+        string = ((f"Dimension: {self.dimension}\n"
+                   f"Pivot column: {self.pivot_column}\n"))
         return string
