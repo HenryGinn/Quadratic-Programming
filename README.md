@@ -1,6 +1,14 @@
 # Quadratic-Programming
 
-################################## OVERVIEW ##################################
+################################### CONTENTS ###################################
+
+1: OVERVIEW
+2: TERMINOLOGY
+3: HOW BASIC VARIABLES DEFINE A VERTEX
+4: HOW THE QUADRATIC ALGORITHM WORKS
+5: COMPUTATION OF NEW LINEAR PROFIT FUNCTION
+
+################################### OVERVIEW ###################################
 
 Implementation of a modified simplex algorithm to maximise x^Tx subject to Ax <= b. All variables are also non negative.
 

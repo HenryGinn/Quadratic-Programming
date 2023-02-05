@@ -1,4 +1,5 @@
 import numpy as np
+from Tableau import Tableau
 
 class QuadraticSimplex():
 
@@ -20,15 +21,15 @@ class QuadraticSimplex():
         self.total_dimensions = self.space_dimensions + self.slack_dimensions
 
     def set_initial_tableau(self):
-        self.profit = 0
-        self.set_initial_profit_function()
-        self.values = np.zeros(self.slack_dimensions)
+        initial_profit_vector = self.get_initial_profit_vector()
+        self.initial_tableau = Tableau(self.constraint_matrix, self.constraint_vector, initial_profit_vector)
 
-    def set_initial_profit_function(self):
-        profit_function_space = np.ones(self.space_dimensions)
+    def get_initial_profit_vector(self):
+        profit_function_space = -1*np.ones(self.space_dimensions)
         profit_function_slack = np.zeros(self.slack_dimensions)
-        self.profit_function = np.concatenate((profit_function_space,
-                                               profit_function_slack), axis=0)        
+        profit_vector = np.concatenate((profit_function_space,
+                                        profit_function_slack), axis=0)
+        return profit_vector
 
     def output_problem_constraints(self):
         print("\nProblem constraints")
@@ -48,6 +49,3 @@ constraint_matrix = np.array([[3, 2],
 constraint_vector = np.array([55, 13, 2, 120])
 
 problem = QuadraticSimplex(constraint_matrix, constraint_vector)
-problem.output_problem_constraints()
-print(problem)
-print(problem.profit_function)
