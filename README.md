@@ -70,3 +70,18 @@ The process described in the previous two paragraphs is then repeated. When any 
     In an N dimensional space, a hyperplane has dimension N-1. All hyperplanes can be described by a linear combination of spatial variables equalling a constant. For each of the n points in our n dimensional space, we need them to lie in the hyperplane, i.e. satisfy the equation. We can describe this sytem of linear equations with a matrix. If a pair of points are equal then the system will be underdefined - this is the situation where the hyperplane spans fewer than n-1 dimensions and has become degenerate. This is not a problem and is in fact expected when the algorithm converges. We can solve the system using the pseudoinverse. Without loss of generality we choose the constant of the hyperplane to be 1 for the purposes of finding the hyperplane, all this does is fix a scaling for the linear combination. As the matrix is never overdetermined we can always solve this system.
     
     We note that we will also have a lower rank matrix if there exist triples of colinear points. We expect that this should not happen if the points have been properly merged once convergence has been detected, but it is not known whether this is the case or not.
+
+############################ CHOOSING THE PIVOT ROW ############################
+
+The pivot row is the row of the basic variable that is going to leave the set of basic variables. The pivot column decides the non-basic variable that is going to enter the set of basic variables, and this determines the direction that the point is going to move along. When we move along this direction, we will intersect with the other constraints at various points as we go, and we want to stop at the first constraint so we do not leave the feasible region. To do this, we compute a value we call theta for each of the basic variables (rows of the tableau)
+
+Simply, the theta column of the tableau is given by the value column divided by the pivot column (not including the profit row), but there are some special cases to consider. If a value is 0 this means that constraint is already holding with equality, and the point would not move any distance as this point describes the same vertex. Moving to the vertex could still get us closer to optimality if the value in the pivot column is positive however, so we need to keep track of whether it is a positive 0 or a negative 0.
+
+Floating point numbers are intervals, and we have to deal with the fact that 0 is the interval (-epsilon, epsilon) (in the class we refer to epsilon with a class attribute called "zero"). We sum up which values of theta are valid in the table below where 0 means invalid and 1 means valid.
+
+                Values
+            -0  +0  -1  +1
+        -0  0   0   0   0
+Pivot   +0  0   0   0   0
+column  -1  0   0   1   0
+        +1  1   1   0   1
