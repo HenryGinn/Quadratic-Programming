@@ -10,7 +10,11 @@ class Tableau():
     Outputs basic and non-basic variables, profit, values, and the whole tableau
     """
 
-    zero = 0.0001
+    debug_theta = False
+
+    valid_theta_signs = np.array([[False, False, False],
+                            [True, True, False],
+                            [False, False, True]])
 
     def __init__(self, dimension, constraint_matrix, constraint_vector, profit_vector):
         self.dimension = dimension
@@ -52,15 +56,47 @@ class Tableau():
         self.profit_row = np.hstack((self.profit_vector, self.profit))
 
     def get_potential_profit(self):
-        theta_list = self.get_theta_list()
-        return None
+        theta_column = self.get_theta_column()
+        pivot_row_index = np.argmin(theta_column)
+        potential_profit = self.process_theta_column(theta_column, pivot_row_index)
+        return potential_profit
 
-    def get_theta_list(self):
+    def get_theta_column(self):
         pivot_column = self.tableau_body[:, self.pivot_column_index]
-        print(self.values)
-        print(pivot_column)
-        valid_rows = [self.values * pivot_column > self.zero]
-        return None
+        valid_theta_array = self.get_valid_theta_array(pivot_column)
+        theta_column = np.where(valid_theta_array, self.values/pivot_column, np.inf)
+        self.debug_theta_computation(pivot_column, theta_column, valid_theta_array)
+        return theta_column
+
+    def get_valid_theta_array(self, pivot_column):
+        pivot_column_sign = np.sign(np.around(pivot_column, 4)).astype('int')
+        value_column_sign = np.sign(np.around(self.values, 4)).astype('int')
+        valid_theta_array = self.valid_theta_signs[value_column_sign, pivot_column_sign]
+        return valid_theta_array
+
+    def debug_theta_computation(self, pivot_column, theta_column, valid_theta_array):
+        if self.debug_theta:
+            theta_computation_array = np.vstack((pivot_column,
+                                                 self.values,
+                                                 theta_column,
+                                                 valid_theta_array))
+            print("Debugging theta computation. Columns are pivot column, values, theta, and whether theta is valid")
+            print(np.transpose(theta_computation_array))
+
+    def process_theta_column(self, theta_column, pivot_row_index):
+        if theta_column[pivot_row_index] == np.inf:
+            potential_profit = -np.inf
+        else:
+            potential_profit = self.compute_potential_profit(pivot_row_index)
+        return potential_profit
+
+    def compute_potential_profit(self, pivot_row_index):
+        pivot_value = self.tableau[self.pivot_column_index, pivot_row_index]
+        profit_pivot_column = self.profit_row[self.pivot_column_index]
+        value_pivot_row = self.values[pivot_row_index]
+        profit_row_multiplier = profit_pivot_column/pivot_value
+        potential_profit = self.profit - value_pivot_row*profit_row_multiplier
+        return potential_profit
 
     def output_all(self):
         print(self)
@@ -117,5 +153,5 @@ class Tableau():
         
     def __str__(self):
         string = ((f"Dimension: {self.dimension}\n"
-                   f"Pivot column: {self.pivot_column}\n"))
+                   f"Pivot column: {self.pivot_column_index}\n"))
         return string

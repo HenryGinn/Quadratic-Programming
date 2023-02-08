@@ -49,8 +49,8 @@ class QuadraticSimplex():
 
     def solve(self):
         while self.solved_status == "Unsolved":
-            self.iterate()
             self.output_tableaux()
+            self.iterate()
             input()
 
     def iterate(self):

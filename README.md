@@ -7,6 +7,7 @@
 3: HOW BASIC VARIABLES DEFINE A VERTEX
 4: HOW THE QUADRATIC ALGORITHM WORKS
 5: COMPUTATION OF NEW LINEAR PROFIT FUNCTION
+6: CHOOSING THE PIVOT ROW
 
 ################################### OVERVIEW ###################################
 
@@ -80,8 +81,7 @@ Simply, the theta column of the tableau is given by the value column divided by 
 Floating point numbers are intervals, and we have to deal with the fact that 0 is the interval (-epsilon, epsilon) (in the class we refer to epsilon with a class attribute called "zero"). We sum up which values of theta are valid in the table below where 0 means invalid and 1 means valid.
 
                 Values
-            -0  +0  -1  +1
-        -0  0   0   0   0
-Pivot   +0  0   0   0   0
-column  -1  0   0   1   0
-        +1  1   1   0   1
+            0  +1  -1
+Pivot    0  0   0   0
+column  +1  1   1   0
+        -1  0   0   1
