@@ -7,6 +7,7 @@
 3: HOW BASIC VARIABLES DEFINE A VERTEX
 4: HOW THE QUADRATIC ALGORITHM WORKS
 5: COMPUTATION OF NEW LINEAR PROFIT FUNCTION
+6: CHOOSING THE PIVOT ROW
 
 ################################### OVERVIEW ###################################
 
@@ -50,7 +51,7 @@ In a 2D problem we start at (x, y) = (0, 0). At this point, we are touching the 
 
 We start off at the origin with a profit function given by the sum of all spatial variables. If the simplex algorithm was to be applied, there would be a choice of n different columns to have as the pivot column (one for each spatial dimension). This is because the profit is increased at the same rate for each of the variables. We split the problem into n, and initialise each of the new tableaux by picking a different pivot column. This is the same as asking the points to point in the directions of the different axes.
 
-Each of the new tablea compute how far they can increase the chosen variable before hitting each of the constraints given by the non basic variables. If that distance is negative it can be ignored because that constraint is in the wrong direction. Out of the positive distances, the minimum is chosen - this is so that the point stays within the feasible region. This will define a new point and we can compute the value at that point given by the current profit function. We want all the points to remain feasible, so we need to choose the value that increases this profit by the smallest amount. If the profit was to be increased more than this, then there would be a point that would have to leave the feasible region to match that profit if it were to continue increasing along it's current direction. Note: this new value might be 0, and we don't move any of the points at all. This would happen when two points hit verticies at the same time for example. We would have still made progress however, as even though the points have not moved, one of the problems will have had it's basic and non-basic variables updated - this is telling it to move along different facets next iteration.
+Each of the new tableau compute how far they can increase the chosen variable before hitting each of the constraints given by the non basic variables. If that distance is negative it can be ignored because that constraint is in the wrong direction. Out of the positive distances, the minimum is chosen - this is so that the point stays within the feasible region. This will define a new point and we can compute the value at that point given by the current profit function. We want all the points to remain feasible, so we need to choose the value that increases this profit by the smallest amount. If the profit was to be increased more than this, then there would be a point that would have to leave the feasible region to match that profit if it were to continue increasing along it's current direction. Note: this new value might be 0, and we don't move any of the points at all. This would happen when two points hit verticies at the same time for example. We would have still made progress however, as even though the points have not moved, one of the problems will have had it's basic and non-basic variables updated - this is telling it to move along different facets next iteration.
 
 The point that has been chosen to be updated is then moved to it's new location. The global profit is then computed - this is not the value of the linear profit function, it is the value of x^Tx. Each of the other points had a direction that they were attempting to move along. The intersection of the hypersphere given by P = x^Tx and each of these lines can be found. These points define a hyperplane - this is the new linear profit function. Note that the other simplex tableax do not need to be updated.
 
@@ -71,4 +72,16 @@ The process described in the previous two paragraphs is then repeated. When any 
     
     We note that we will also have a lower rank matrix if there exist triples of colinear points. We expect that this should not happen if the points have been properly merged once convergence has been detected, but it is not known whether this is the case or not.
 
-################## PIVOTING THE SIMPLEX TABLEAU ##################
+############################ CHOOSING THE PIVOT ROW ############################
+
+The pivot row is the row of the basic variable that is going to leave the set of basic variables. The pivot column decides the non-basic variable that is going to enter the set of basic variables, and this determines the direction that the point is going to move along. When we move along this direction, we will intersect with the other constraints at various points as we go, and we want to stop at the first constraint so we do not leave the feasible region. To do this, we compute a value we call theta for each of the basic variables (rows of the tableau)
+
+Simply, the theta column of the tableau is given by the value column divided by the pivot column (not including the profit row), but there are some special cases to consider. If a value is 0 this means that constraint is already holding with equality, and the point would not move any distance as this point describes the same vertex. Moving to the vertex could still get us closer to optimality if the value in the pivot column is positive however, so we need to keep track of whether it is a positive 0 or a negative 0.
+
+Floating point numbers are intervals, and we have to deal with the fact that 0 is the interval (-epsilon, epsilon) (in the class we refer to epsilon with a class attribute called "zero"). We sum up which values of theta are valid in the table below where 0 means invalid and 1 means valid.
+
+                Values
+            0  +1  -1
+Pivot    0  0   0   0
+column  +1  1   1   0
+        -1  0   0   1

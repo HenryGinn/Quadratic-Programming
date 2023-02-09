@@ -16,7 +16,7 @@ class Tableau():
                             [True, True, False],
                             [False, False, True]])
 
-    def __init__(self, global_problem, dimension, profit_vector):
+    def __init__(self, dimension, constraint_matrix, constraint_vector, profit_vector):
         self.dimension = dimension
         self.global_problem = global_problem
         self.constraint_matrix = global_problem.constraint_matrix
@@ -58,8 +58,8 @@ class Tableau():
 
     def get_potential_profit(self):
         theta_column = self.get_theta_column()
-        self.pivot_row_index = np.argmin(theta_column)
-        potential_profit = self.process_theta_column(theta_column)
+        pivot_row_index = np.argmin(theta_column)
+        potential_profit = self.process_theta_column(theta_column, pivot_row_index)
         return potential_profit
 
     def get_theta_column(self):
@@ -84,51 +84,20 @@ class Tableau():
             print("Debugging theta computation. Columns are pivot column, values, theta, and whether theta is valid")
             print(np.transpose(theta_computation_array))
 
-    def process_theta_column(self, theta_column):
-        if theta_column[self.pivot_row_index] == np.inf:
+    def process_theta_column(self, theta_column, pivot_row_index):
+        if theta_column[pivot_row_index] == np.inf:
             potential_profit = -np.inf
         else:
-            potential_profit = self.compute_potential_profit()
+            potential_profit = self.compute_potential_profit(pivot_row_index)
         return potential_profit
 
-    def compute_potential_profit(self):
-        pivot_value = self.tableau[self.pivot_column_index, self.pivot_row_index]
+    def compute_potential_profit(self, pivot_row_index):
+        pivot_value = self.tableau[self.pivot_column_index, pivot_row_index]
         profit_pivot_column = self.profit_row[self.pivot_column_index]
-        value_pivot_row = self.values[self.pivot_row_index]
+        value_pivot_row = self.values[pivot_row_index]
         profit_row_multiplier = profit_pivot_column/pivot_value
         potential_profit = self.profit - value_pivot_row*profit_row_multiplier
         return potential_profit
-
-    def pivot(self):
-        pass
-
-    def get_line_of_movement(self):
-        line_reference_vector = self.get_line_reference_vector()
-        line_direction_vector = self.get_line_direction_vector()
-
-    def get_line_reference_vector(self):
-        reference_vector = np.array([self.get_spatial_variable_value(dimension)
-                                     for dimension in range(self.space_dimensions)])
-        return reference_vector
-
-    def get_spatial_variable_value(self, dimension):
-        if dimension in self.basic_variables:
-            index = self.basic_variables.index(dimension)
-            value = self.basic_variables[index]
-        else:
-            value = 0
-        return value
-
-    def get_line_direction_vector(self):
-        constraint_indices = self.get_constraint_indices()
-        print(constraint_indices)
-        print(self.global_problem.space_constraints)
-
-    def get_constraint_indices(self):
-        constraint_indices = np.copy(self.non_basic_variables)
-        removing_indices = constraint_indices == self.pivot_column_index
-        constraint_indices = np.delete(constraint_indices, removing_indices)
-        return constraint_indices
 
     def output_all(self):
         print(self)
