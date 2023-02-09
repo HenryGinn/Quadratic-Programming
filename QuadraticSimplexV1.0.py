@@ -15,6 +15,7 @@ class QuadraticSimplex():
         self.constraint_vector = constraint_vector
         self.set_dimensions()
         self.set_initial_tableaux()
+        self.set_space_constraints()
         self.solved_status = "Unsolved"
 
     def set_dimensions(self):
@@ -23,22 +24,10 @@ class QuadraticSimplex():
         self.total_dimensions = self.space_dimensions + self.slack_dimensions
 
     def set_initial_tableaux(self):
-        initial_tableau = self.get_initial_tableau()
+        initial_profit_vector = self.get_initial_profit_vector()
+        initial_tableau = Tableau(self, -1, initial_profit_vector)
         self.tableaux = [self.create_tableau_dimension(initial_tableau, dimension)
                          for dimension in range(self.space_dimensions)]
-
-    def create_tableau_dimension(self, initial_tableau, dimension):
-        tableau_dimension = deepcopy(initial_tableau)
-        tableau_dimension.dimension = dimension
-        tableau_dimension.pivot_column = dimension
-        return tableau_dimension
-
-    def get_initial_tableau(self):
-        initial_profit_vector = self.get_initial_profit_vector()
-        initial_tableau = Tableau(-1, self.constraint_matrix,
-                                  self.constraint_vector,
-                                  initial_profit_vector)
-        return initial_tableau
         
     def get_initial_profit_vector(self):
         profit_function_space = -1*np.ones(self.space_dimensions)
@@ -47,18 +36,46 @@ class QuadraticSimplex():
                                         profit_function_slack), axis=0)
         return profit_vector
 
+    def create_tableau_dimension(self, initial_tableau, dimension):
+        tableau_dimension = deepcopy(initial_tableau)
+        tableau_dimension.dimension = dimension
+        tableau_dimension.pivot_column_index = dimension
+        return tableau_dimension
+
+    def set_space_constraints(self):
+        non_negativity_constraints = np.identity(self.space_dimensions)
+        self.space_constraints = np.concatenate((self.constraint_matrix,
+                                                 non_negativity_constraints),
+                                                axis=0)
+
     def solve(self):
         while self.solved_status == "Unsolved":
+            #self.output_tableaux()
             self.iterate()
-            self.output_tableaux()
             input()
 
     def iterate(self):
-        updating_dimension = self.get_updating_dimension()
+        self.set_updating_tableau()
+        self.updating_tableau.pivot()
+        self.set_profit()
+        self.compute_partial_positions()
 
-    def get_updating_dimension(self):
-        theta_min_list = [tableau.get_theta_min() for tableau in self.tableaux]
-        print(theta_min_list)
+    def set_updating_tableau(self):
+        potential_profit_list = [tableau.get_potential_profit()
+                                 for tableau in self.tableaux]
+        updating_dimension = np.argmin(potential_profit_list)
+        self.updating_tableau = self.tableaux[updating_dimension]
+
+    def set_profit(self):
+        self.updating_tableau.set_basic_variable_spatial_dict()
+        dict_values = self.updating_tableau.basic_variable_spatial_dict.values()
+        non_trivial_spatial_variables = np.array(list(dict_values))
+        self.profit = sum(non_trivial_spatial_variables**2)
+
+    def compute_partial_positions(self):
+        for tableau in self.tableaux:
+            if tableau != self.updating_tableau:
+                tableau.get_line_of_movement()
 
     def output_problem_constraints(self):
         print("Problem constraints")
