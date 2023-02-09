@@ -17,7 +17,7 @@ class QuadraticSimplex():
         self.set_initial_tableaux()
         self.set_space_constraints()
         self.solved_status = "Unsolved"
-
+        
     def set_dimensions(self):
         self.space_dimensions = self.constraint_matrix.shape[1]
         self.slack_dimensions = self.constraint_matrix.shape[0]
@@ -28,19 +28,6 @@ class QuadraticSimplex():
         initial_tableau = Tableau(self, -1, initial_profit_vector)
         self.tableaux = [self.create_tableau_dimension(initial_tableau, dimension)
                          for dimension in range(self.space_dimensions)]
-
-    def create_tableau_dimension(self, initial_tableau, dimension):
-        tableau_dimension = deepcopy(initial_tableau)
-        tableau_dimension.dimension = dimension
-        tableau_dimension.pivot_column_index = dimension
-        return tableau_dimension
-
-    def get_initial_tableau(self):
-        initial_profit_vector = self.get_initial_profit_vector()
-        initial_tableau = Tableau(-1, self.constraint_matrix,
-                                  self.constraint_vector,
-                                  initial_profit_vector)
-        return initial_tableau
         
     def get_initial_profit_vector(self):
         profit_function_space = -1*np.ones(self.space_dimensions)
@@ -51,6 +38,7 @@ class QuadraticSimplex():
 
     def create_tableau_dimension(self, initial_tableau, dimension):
         tableau_dimension = deepcopy(initial_tableau)
+        tableau_dimension.global_problem = self
         tableau_dimension.dimension = dimension
         tableau_dimension.pivot_column_index = dimension
         return tableau_dimension
@@ -63,7 +51,7 @@ class QuadraticSimplex():
 
     def solve(self):
         while self.solved_status == "Unsolved":
-            self.output_tableaux()
+            #self.output_tableaux()
             self.iterate()
             input()
 
@@ -85,9 +73,10 @@ class QuadraticSimplex():
         non_trivial_spatial_variables = np.array(list(dict_values))
         self.profit = sum(non_trivial_spatial_variables**2)
 
-    def get_updating_dimension(self):
-        potential_profit_list = [tableau.get_potential_profit() for tableau in self.tableaux]
-        print(potential_profit_list)
+    def compute_partial_positions(self):
+        for tableau in self.tableaux:
+            if tableau != self.updating_tableau:
+                tableau.get_line_of_movement()
 
     def output_problem_constraints(self):
         print("Problem constraints")
