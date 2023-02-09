@@ -85,3 +85,16 @@ Floating point numbers are intervals, and we have to deal with the fact that 0 i
 Pivot    0  0   0   0
 column  +1  1   1   0
         -1  0   0   1
+
+################### LINEAR ALGEBRA IMPLEMENTATION OF SIMPLEX ###################
+
+Once the slack variables are added we have a system of equations, Ax = b. We can write x_B and x_N have components equal to the basic and non-basic variables respectively. Similarly we define the matrices A_B and A_N which have the columns of the indices of the basic and non-basic variables respectively. In these new variables the system Ax = b turns into A_B x_B + A_N x_N = b, and similarly the objective function can be written as c_B^T x_B + c_N^T x_N.
+
+This can be rearranged as the following:
+x_B = A_B^-1 b - A_B^-1 A_N x_N
+z = c_B^T A_B^-1 b + (c_N^T - c_B^T A_B^-1 A_N) x_N
+These describe the relevant parts of the tableau and the profit row respectively.
+
+We never find the inverse of A_B. Instead we compute it's LU factorisation and use it to solve linear systems. This is because it is faster, saves memory, and is more stable.
+
+The tableau is x_B = A_B^-1(b - A_N x_N). This means that x_B (the values of the basic variables) is the solution to the linear system A_B x_B = b - A_N x_N. A column of 
