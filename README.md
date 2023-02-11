@@ -8,6 +8,9 @@
 4: HOW THE QUADRATIC ALGORITHM WORKS
 5: COMPUTATION OF NEW LINEAR PROFIT FUNCTION
 6: CHOOSING THE PIVOT ROW
+7: CONVERGENCE AND NON-UNIQUENESS
+8: DISCUSSION ON DEGENERATIVE SITUATIONS
+9: LINEAR ALGEBRA IMPLEMENTATION OF SIMPLEX
 
 ################################### OVERVIEW ###################################
 
@@ -51,11 +54,24 @@ In a 2D problem we start at (x, y) = (0, 0). At this point, we are touching the 
 
 We start off at the origin with a profit function given by the sum of all spatial variables. If the simplex algorithm was to be applied, there would be a choice of n different columns to have as the pivot column (one for each spatial dimension). This is because the profit is increased at the same rate for each of the variables. We split the problem into n, and initialise each of the new tableaux by picking a different pivot column. This is the same as asking the points to point in the directions of the different axes.
 
-Each of the new tableau compute how far they can increase the chosen variable before hitting each of the constraints given by the non basic variables. If that distance is negative it can be ignored because that constraint is in the wrong direction. Out of the positive distances, the minimum is chosen - this is so that the point stays within the feasible region. This will define a new point and we can compute the value at that point given by the current profit function. We want all the points to remain feasible, so we need to choose the value that increases this profit by the smallest amount. If the profit was to be increased more than this, then there would be a point that would have to leave the feasible region to match that profit if it were to continue increasing along it's current direction. Note: this new value might be 0, and we don't move any of the points at all. This would happen when two points hit verticies at the same time for example. We would have still made progress however, as even though the points have not moved, one of the problems will have had it's basic and non-basic variables updated - this is telling it to move along different facets next iteration.
+Each of the new tableau compute how far they can increase the chosen variable before hitting each of the constraints given by the non basic variables. If that distance is negative it can be ignored because that constraint is in the wrong direction. Out of the positive distances, the minimum is chosen - this is so that the point stays within the feasible region. This will define a new point and we can compute the value at that point given by the current profit function. We want all the points to remain feasible, so we need to choose the value that increases this profit by the smallest amount. If the profit was to be increased more than this, then there would be a point that would have to leave the feasible region to match that profit if it were to continue increasing along it's current direction. Note: this new value might be 0, and we don't move any of the points at all. This would happen when two points hit verticies at the same time for example. We would have still made progress however, as even though the points have not moved, one of the problems will have had it's basic and non-basic variables updated - this is telling it to move along different facets next iteration. When this happens we do not need to update the hyperplane, and if it happens at the start, the hyperplane may in fact not be defined so it couldn't be updated anyway.
 
 The point that has been chosen to be updated is then moved to it's new location. The global profit is then computed - this is not the value of the linear profit function, it is the value of x^Tx. Each of the other points had a direction that they were attempting to move along. The intersection of the hypersphere given by P = x^Tx and each of these lines can be found. These points define a hyperplane - this is the new linear profit function. Note that the other simplex tableax do not need to be updated.
 
-The process described in the previous two paragraphs is then repeated. When any pair of points has the same set of basic variables and has the same pivot column (going in the same direction), they have converged to each other. They can be treated at one point from then on. Note that the angle at the origin between any pair of points is non-increasing - this implies that the solid angle is also non-increasing. When all points have converged to each other, the whole problem has converged.
+The process described in the previous two paragraphs is then repeated. When any pair of points have the same spatial coordinates and are going in the same direction, they have converged to each other. Note that being in the same point in space is not the same as having the same basic variables, and that moving in the same direction is not the same as having the same pivot column. They can be treated at one point from then on. Note that the angle at the origin between any pair of points is non-increasing - this implies that the solid angle is also non-increasing.
+
+Below is an overview of the algorithm
+Initialisation:
+1: Objective function is defined as the hyperplane with the normal vector with all it's components equal to 1.
+2: n points are defined where all spatial coordinates are non-basic (this defines the origin).
+3: The pivot column of each point is prescribed to point along one of the axes.
+
+Iteration:
+1: Determine which point is going to be updated by finding which one increases the linear profit the least.
+2: Update the basic and non-basic variables of the chosen point.
+3: If the point moved, update the objective function.
+4: Compute the new pivot column and direction lines for all the points.
+5: Check if any points have converged to each other and merge these points.
 
 ################## COMPUTATION OF NEW LINEAR PROFIT FUNCTION ##################
 
@@ -86,6 +102,26 @@ Pivot    0  0   0   0
 column  +1  1   1   0
         -1  0   0   1
 
+#################### CONVERGENCE AND NON-UNIQUENESS ####################
+
+If any of the points have all non-negative entries in the profit row then the problem has converged. This follows from the strict convexity of x^T x, and it will also be the case that all other points will have all non-negative entries in the profit row. This fits nicely with the optimality conditions of the simplex algorithm, and it is also consistent with the fact that choosing a pivot column for such a point is now undefined.
+
+Convergence does not imply that all points have merged into one. It is possible for there to be multiple solutions to a quadratic maximisation problem, for example a problem with the single constraint x + y <= 10 will have solutions (10, 0) and (0, 10).
+
+If a problem has multiple solutions we can immediately see that it will not necessarily find them all. This is because for an n dimensional problem there can be more than n optimal points and the algorithm only starts will n points.
+
+#################### DISCUSSION ON DEGENERATIVE SITUATIONS ####################
+
+Suppose at the start of the algorithm there are several constraints that pass through the origin. In this case the first step of the algorithm will choose one of the points that is constrained by one of those constraints and update it's basic and non-basic variables. Spatially nothing has happened however, and it seems that some of the next stages may be poorly defined. In this section we describe what happens in this situation.
+
+If no points have changed location, a new objective function does not need to be found. The only difference has happened under the hood via a change in basic and non-basic variables, so it makes sense that we use the same objective function in the next iteration as geometrically nothing has changed.
+
+We consider the 2D problem where we have x <= 1, y <= 0 and non negativity constraints. The y <= 0 constraint effectively reduces this problem into 1 dimension, so we expect the algorithm to realise this and merge the two points into one. We will refer to the points moving in the x and y directions as point X and point Y respectively.
+
+In the first step of the algorithm, point Y is chosen as the first point to be updated as the most it can move is 0 before hitting a constraint. It's basic and non-basic variables update, and as no change has been made spatially, we keep the same objective function. As we have the same objective function, we do not need to update the direction of point X, and we only need to choose a new direction for point Y.
+
+The objective function would have been initialised as P = x + y, so point Y will be chosen to increase along the y <= 0 constraint. Both points are now at the origin and moving towards the right - these are exactly our conditions for points to have converged to each other, so one of the points can be deleted. We now have 1 point left and the computed objective function will have it's normal given by the coordinates of that point. The algorithm will terminate on the next step at (1, 0).
+
 ################### LINEAR ALGEBRA IMPLEMENTATION OF SIMPLEX ###################
 
 Once the slack variables are added we have a system of equations, Ax = b. We can write x_B and x_N have components equal to the basic and non-basic variables respectively. Similarly we define the matrices A_B and A_N which have the columns of the indices of the basic and non-basic variables respectively. In these new variables the system Ax = b turns into A_B x_B + A_N x_N = b, and similarly the objective function can be written as c_B^T x_B + c_N^T x_N.
@@ -97,4 +133,6 @@ These describe the relevant parts of the tableau and the profit row respectively
 
 We never find the inverse of A_B. Instead we compute it's LU factorisation and use it to solve linear systems. This is because it is faster, saves memory, and is more stable.
 
-The tableau is x_B = A_B^-1(b - A_N x_N). This means that x_B (the values of the basic variables) is the solution to the linear system A_B x_B = b - A_N x_N. A column of 
+The tableau is x_B = A_B^-1 b - A_B^-1 A_N x_N. The components of x_N are 0, so the first term here , A_B^-1 b, gives the value of x_B (the numbers in the value column of the tableau). The second term forms the non-basic part of the tableau. We write A_i for the column of A_N corresponding to the i'th non-basic variable, and A_B^-1 A_i gives the value of the column in the tableau. We can find this by solving the linear system A_B v = A_i for v.
+
+Similarly we can extract information from the profit row. The profit is given by c_B^T A_B^-1 b, and we note that this is the same as finding the dot product of c_B with the values of the basic variables found above. c_N^T - c_B^T A_B^-1 A_N gives the non-basic values in the profit row. Taking the tranpose of this gives c_N - A_N^T A_B^-T c_B. We can find the value of A_B^-T c_B by solving the linear system A_B^T v = c_B, and then substitute this in to find the profit row. We note that once the LU factorisation of A has been found, the LU factorisation of A^T is also given as A^T = (LU)^T = U^T L^T and U^T, L^T are lower and upper triangular matrices respectively.

@@ -13,8 +13,8 @@ class Tableau():
     debug_theta = False
 
     valid_theta_signs = np.array([[False, False, False],
-                            [True, True, False],
-                            [False, False, True]])
+                                  [True, True, False],
+                                  [False, False, True]])
 
     def __init__(self, global_problem, dimension, profit_vector):
         self.dimension = dimension
@@ -48,13 +48,13 @@ class Tableau():
     def set_initial_tableau(self):
         self.values = np.copy(self.constraint_vector)
         self.set_initial_profit_data()
-        self.tableau_body = np.concatenate((self.constraint_matrix, np.identity(self.slack_dimensions)), axis=1)
-        self.tableau = np.concatenate((self.tableau_body, self.values.reshape(-1, 1)), axis=1)
-        self.tableau = np.vstack((self.tableau, self.profit_row))
+        self.tableau = np.concatenate((self.constraint_matrix,
+                                       np.identity(self.slack_dimensions)),
+                                      axis=1)
 
     def set_initial_profit_data(self):
         self.profit = 0
-        self.profit_row = np.hstack((self.profit_vector, self.profit))
+        self.profit_row = np.copy(self.profit_vector)
 
     def get_potential_profit(self):
         theta_column = self.get_theta_column()
@@ -63,7 +63,7 @@ class Tableau():
         return potential_profit
 
     def get_theta_column(self):
-        pivot_column = self.tableau_body[:, self.pivot_column_index]
+        pivot_column = self.tableau[:, self.pivot_column_index]
         valid_theta_array = self.get_valid_theta_array(pivot_column)
         theta_column = np.where(valid_theta_array, self.values/pivot_column, np.inf)
         self.debug_theta_computation(pivot_column, theta_column, valid_theta_array)
@@ -132,7 +132,6 @@ class Tableau():
 
     def output_all(self):
         print(self)
-        self.output_tableau()
         self.output_basic_and_non_basic_variables()
         self.output_values()
         self.output_profit_information()
@@ -150,10 +149,6 @@ class Tableau():
         for basic_variable, value in zip(self.basic_variables, self.values):
             print(f"{basic_variable}: {round(value, 2)}")
         print("")
-
-    def output_tableau(self):
-        print(("Outputting tableau\n"
-               f"{self.tableau}\n"))
 
     def output_vertex_position(self):
         print("Outputting vertex position")
