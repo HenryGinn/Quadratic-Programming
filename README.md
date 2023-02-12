@@ -2,15 +2,16 @@
 
 ################################### CONTENTS ###################################
 
-1: OVERVIEW
-2: TERMINOLOGY
-3: HOW BASIC VARIABLES DEFINE A VERTEX
-4: HOW THE QUADRATIC ALGORITHM WORKS
-5: COMPUTATION OF NEW LINEAR PROFIT FUNCTION
-6: CHOOSING THE PIVOT ROW
-7: CONVERGENCE AND NON-UNIQUENESS
-8: DISCUSSION ON DEGENERATIVE SITUATIONS
-9: LINEAR ALGEBRA IMPLEMENTATION OF SIMPLEX
+1:  OVERVIEW
+2:  TERMINOLOGY
+3:  HOW BASIC VARIABLES DEFINE A VERTEX
+4:  HOW THE QUADRATIC ALGORITHM WORKS
+5:  COMPUTATION OF NEW LINEAR PROFIT FUNCTION
+6:  CHOOSING THE PIVOT ROW
+7:  CONVERGENCE AND NON-UNIQUENESS
+8:  DISCUSSION ON DEGENERATIVE SITUATIONS
+9:  LINEAR ALGEBRA IMPLEMENTATION OF SIMPLEX
+10: DETERMINING UNIQUENESS OF SOLUTIONS
 
 ################################### OVERVIEW ###################################
 
@@ -139,3 +140,17 @@ We never find the inverse of A_B. Instead we compute it's LU factorisation and u
 The tableau is x_B = A_B^-1 b - A_B^-1 A_N x_N. The components of x_N are 0, so the first term here , A_B^-1 b, gives the value of x_B (the numbers in the value column of the tableau). The second term forms the non-basic part of the tableau. We write A_i for the column of A_N corresponding to the i'th non-basic variable, and A_B^-1 A_i gives the value of the column in the tableau. We can find this by solving the linear system A_B v = A_i for v.
 
 Similarly we can extract information from the profit row. The profit is given by c_B^T A_B^-1 b, and we note that this is the same as finding the dot product of c_B with the values of the basic variables found above. c_N^T - c_B^T A_B^-1 A_N gives the non-basic values in the profit row. Taking the tranpose of this gives c_N - A_N^T A_B^-T c_B. We can find the value of A_B^-T c_B by solving the linear system A_B^T v = c_B, and then substitute this in to find the profit row. We note that once the LU factorisation of A has been found, the LU factorisation of A^T is also given as A^T = (LU)^T = U^T L^T and U^T, L^T are lower and upper triangular matrices respectively.
+
+##################### DETERMINING UNIQUENESS OF SOLUTIONS #####################
+
+If we have a quadratic programming problem to maximise x^T x subject to Ax <= b then we can construct a new quadratic programming problem that tells us whether the solution is unique. We attempt to solve two problems at once while also maximising the different between them.
+
+If we have two vectors, x and y, which satisfy Ax <= b and Ay <= b then we can describe their difference with (x-y)^T (x-y). If we maximise this difference and it is 0 then we know the solution is unique, although we need to ensure that we are not affecting the value of x^T x and y^T y.
+
+We want a profit function that maximises the original objective function while also maximising the difference. If the maximum of x^T x subject to Ax <= b is equal to P, we want it to be the case that if x^T x or y^T y < P then our new profit function would be lower than if x^T x = P = y^T y, even if we have maximised the difference in the first case.
+
+We conjecture that this cannot always be guaranteed, but if we restrict to the case where we know the coordinates of any optimal point will have components equal to 0 or 1 then we can. The maximim value of the difference is equal to the number of variables in the original problem, so we consider the profit function given by (len(x) + 1)*(x^T x + y^T y) + (x-y)^T (x-y).
+
+In this situation if the original problems are any less than the maximim then we have x^T x + y^T y <= 2P-1 and the maximum profit will occur when (x-y)^T (x-y) is maximised. This gives us P <= (len(x) + 1)*(2P-1) + len(x) = 2P*len(x) + 2P - len(x) - 1 + len(x) = 2P*len(x) + 2P - 1. Alternatively if x^T x and y^T y are maximised, then we will have P = (len(x) + 1)*2P + (x-y)^T (x-y) >= (len(x) + 1)*2p = 2P*len(x) + 2P > 2P*len(x) + 2P - 1, and we see that the profit is strictly greater than in the first case.
+
+This new problem is not in the correct form for this algorithm, but it can be put into the right form as outlined in the overview section. We also note that if there are many variables then this may lead to poor conditioning of the problem.
