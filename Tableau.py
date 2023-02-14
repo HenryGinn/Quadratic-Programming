@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sc
 
 class Tableau():
 
@@ -22,14 +23,14 @@ class Tableau():
         self.constraint_matrix = global_problem.constraint_matrix
         self.constraint_vector = global_problem.constraint_vector
         self.profit_vector = profit_vector
-        self.initialise_tableau_from_input_data()
+        self.initialise_problem_from_input_data()
         self.pivot_column_index = None
 
-    def initialise_tableau_from_input_data(self):
+    def initialise_problem_from_input_data(self):
         self.set_dimensions()
         self.set_spatial_and_non_spatial_variables()
         self.initialise_basic_and_non_basic_variables()
-        self.set_initial_tableau()
+        self.set_tableau_data()
 
     def set_dimensions(self):
         self.space_dimensions = self.constraint_matrix.shape[1]
@@ -40,21 +41,49 @@ class Tableau():
         self.spatial_variables = np.array(range(self.space_dimensions))
         self.slack_variables = np.array(range(self.space_dimensions, self.total_dimensions))
 
-
     def initialise_basic_and_non_basic_variables(self):
         self.non_basic_variables = np.array(range(self.space_dimensions))
         self.basic_variables = np.array(range(self.space_dimensions, self.total_dimensions))
 
-    def set_initial_tableau(self):
+    def set_tableau_data(self):
         self.values = np.copy(self.constraint_vector)
-        self.set_initial_profit_data()
+        self.profit = 0
         self.tableau = np.concatenate((self.constraint_matrix,
                                        np.identity(self.slack_dimensions)),
                                       axis=1)
 
-    def set_initial_profit_data(self):
-        self.profit = 0
-        self.profit_row = np.copy(self.profit_vector)
+    def set_tableau_components(self):
+        self.set_column_filtered_arrays()
+        self.A_basic_LU, self.A_permute = sc.linalg.lu_factor(self.A_basic)
+        self.set_values()
+        self.set_pivot_column()
+        self.set_profit_row()
+        self.profit = self.get_profit()
+    
+    def set_column_filtered_arrays(self):
+        self.A_basic = self.tableau[:, self.basic_variables]
+        self.A_non_basic = self.tableau[:, self.non_basic_variables]
+        self.c_basic = self.profit_vector[self.basic_variables]
+        self.c_non_basic = self.profit_vector[self.non_basic_variables]
+
+    def set_values(self):
+        self.values = sc.linalg.lu_solve((self.A_basic_LU, self.A_permute),
+                                         self.constraint_vector)
+    
+    def set_pivot_column(self):
+        pivot_column = self.tableau[:, self.pivot_column_index]
+        self.pivot_column = sc.linalg.lu_solve((self.A_basic_LU, self.A_permute),
+                                               pivot_column)
+
+    def set_profit_row(self):
+        intermediate_vector = sc.linalg.lu_solve((self.A_basic_LU, self.A_permute),
+                                                 self.c_basic, trans = 1)
+        self.profit_row = self.c_non_basic - np.dot(np.transpose(self.A_non_basic),
+                                                    intermediate_vector)
+
+    def get_profit(self):
+        profit = np.dot(self.c_basic, self.values)
+        return profit
 
     def get_potential_profit(self):
         theta_column = self.get_theta_column()
@@ -63,25 +92,28 @@ class Tableau():
         return potential_profit
 
     def get_theta_column(self):
-        pivot_column = self.tableau[:, self.pivot_column_index]
-        valid_theta_array = self.get_valid_theta_array(pivot_column)
+        self.set_pivot_column()
+        valid_theta_array = self.get_valid_theta_array()
+        pivot_column = np.where(valid_theta_array, self.pivot_column, 1)
         theta_column = np.where(valid_theta_array, self.values/pivot_column, np.inf)
-        self.debug_theta_computation(pivot_column, theta_column, valid_theta_array)
+        self.debug_theta_computation(theta_column, pivot_column, valid_theta_array)
         return theta_column
 
-    def get_valid_theta_array(self, pivot_column):
-        pivot_column_sign = np.sign(np.around(pivot_column, 4)).astype('int')
+    def get_valid_theta_array(self):
+        pivot_column_sign = np.sign(np.around(self.pivot_column, 4)).astype('int')
         value_column_sign = np.sign(np.around(self.values, 4)).astype('int')
-        valid_theta_array = self.valid_theta_signs[value_column_sign, pivot_column_sign]
+        valid_theta_array = self.valid_theta_signs[pivot_column_sign, value_column_sign]
         return valid_theta_array
 
-    def debug_theta_computation(self, pivot_column, theta_column, valid_theta_array):
+    def debug_theta_computation(self, theta_column, pivot_column_valid, valid_theta_array):
         if self.debug_theta:
-            theta_computation_array = np.vstack((pivot_column,
+            theta_computation_array = np.vstack((self.pivot_column,
+                                                 pivot_column_valid,
                                                  self.values,
                                                  theta_column,
                                                  valid_theta_array))
-            print("Debugging theta computation. Columns are pivot column, values, theta, and whether theta is valid")
+            print(("Debugging theta computation. Columns are pivot column,\n"
+                   "pivot column valid, values, theta, and whether theta is valid"))
             print(np.transpose(theta_computation_array))
 
     def process_theta_column(self, theta_column):
@@ -92,7 +124,7 @@ class Tableau():
         return potential_profit
 
     def compute_potential_profit(self):
-        pivot_value = self.tableau[self.pivot_column_index, self.pivot_row_index]
+        pivot_value = self.pivot_column[self.pivot_row_index]
         profit_pivot_column = self.profit_row[self.pivot_column_index]
         value_pivot_row = self.values[self.pivot_row_index]
         profit_row_multiplier = profit_pivot_column/pivot_value
@@ -100,7 +132,20 @@ class Tableau():
         return potential_profit
 
     def pivot(self):
-        pass
+        self.update_basic_and_non_basic_variables()
+        self.set_tableau_components()
+        self.set_pivot_column_index()
+
+    def update_basic_and_non_basic_variables(self):
+        exiting_variable = self.basic_variables[self.pivot_row_index]
+        entering_variable = self.non_basic_variables[self.pivot_column_index]
+        self.basic_variables[self.pivot_row_index] = entering_variable
+        self.non_basic_variables[self.pivot_column_index] = exiting_variable
+
+    def set_pivot_column_index(self):
+        self.pivot_column_index = np.argmin(self.profit_row)
+        if self.profit_row[self.pivot_column_index] == 0:
+            print("Optimal!")
 
     def get_line_of_movement(self):
         line_reference_vector = self.get_line_reference_vector()
@@ -117,6 +162,7 @@ class Tableau():
             value = self.basic_variables[index]
         else:
             value = 0
+        print("Value: ", value)
         return value
 
     def get_line_direction_vector(self):
@@ -131,8 +177,8 @@ class Tableau():
         return constraint_indices
 
     def output_all(self):
-        print(self)
         self.output_basic_and_non_basic_variables()
+        self.output_matrices()
         self.output_values()
         self.output_profit_information()
         self.output_vertex_position()
@@ -140,18 +186,24 @@ class Tableau():
     def output_basic_and_non_basic_variables(self):
         basic_variables_string = [str(round(value, 2)) for value in self.basic_variables]
         non_basic_variables_string = [str(round(value, 2)) for value in self.non_basic_variables]
-        print(("Outputting basic and non basic variables\n"
+        print((f"Outputting basic and non basic variables for dimension {self.dimension}\n"
                f"Basic variables: {', '.join(basic_variables_string)}\n"
-               f"Non-basic variables: {', '.join(non_basic_variables_string)}\n"))
+               f"Non-basic variables: {', '.join(non_basic_variables_string)}\n"
+               f"Pivot column index: {self.pivot_column_index}"))
 
     def output_values(self):
-        print("Outputting values")
+        print(f"Outputting values for dimension {self.dimension}")
         for basic_variable, value in zip(self.basic_variables, self.values):
             print(f"{basic_variable}: {round(value, 2)}")
         print("")
 
+    def output_matrices(self):
+        print(f"Outputting basic and non-basic matrices for dimension {self.dimension}")
+        print(self.A_basic)
+        print(self.A_non_basic)
+
     def output_vertex_position(self):
-        print("Outputting vertex position")
+        print(f"Outputting vertex position for dimension {self.dimension}")
         self.set_basic_variable_spatial_dict()
         for spatial_variable in self.spatial_variables:
             spatial_variable_value = self.get_spatial_variable_value(spatial_variable)
@@ -166,19 +218,14 @@ class Tableau():
 
     def get_spatial_variable_value(self, spatial_variable):
         if spatial_variable in self.basic_variables:
-            value = self.basic_variable[self.basic_variables == spatial_variable]
+            value = self.basic_variables[self.basic_variables == spatial_variable][0]
         else:
             value = 0
         return value
 
     def output_profit_information(self):
-        print("Outputting profit information")
+        print(f"Outputting profit information for dimension {self.dimension}")
         print(f"Profit: {self.profit}")
-        for non_basic_variable in self.non_basic_variables:
-            print(f"{non_basic_variable}: {self.profit_vector[non_basic_variable]}")
+        for non_basic_variable, profit_coefficient in zip(self.non_basic_variables, self.profit_row):
+            print(f"{non_basic_variable}: {profit_coefficient}")
         print("")
-        
-    def __str__(self):
-        string = ((f"Dimension: {self.dimension}\n"
-                   f"Pivot column: {self.pivot_column_index}\n"))
-        return string
