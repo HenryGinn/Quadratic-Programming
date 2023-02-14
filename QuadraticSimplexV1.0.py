@@ -25,23 +25,24 @@ class QuadraticSimplex():
         self.total_dimensions = self.space_dimensions + self.slack_dimensions
 
     def set_initial_tableaux(self):
-        initial_profit_vector = self.get_initial_profit_vector()
-        initial_tableau = Tableau(self, -1, initial_profit_vector)
+        self.set_initial_profit_vector()
+        initial_tableau = Tableau(self, -1, self.profit_vector)
         self.tableaux = [self.create_tableau_dimension(initial_tableau, dimension)
                          for dimension in range(self.space_dimensions)]
         
-    def get_initial_profit_vector(self):
+    def set_initial_profit_vector(self):
         profit_function_space = -1*np.ones(self.space_dimensions)
         profit_function_slack = np.zeros(self.slack_dimensions)
-        profit_vector = np.concatenate((profit_function_space,
-                                        profit_function_slack), axis=0)
-        return profit_vector
+        self.profit_vector = np.concatenate((profit_function_space,
+                                             profit_function_slack), axis=0)
+        self.profit = 0
 
     def create_tableau_dimension(self, initial_tableau, dimension):
         tableau_dimension = deepcopy(initial_tableau)
         tableau_dimension.global_problem = self
         tableau_dimension.dimension = dimension
         tableau_dimension.pivot_column_index = dimension
+        tableau_dimension.set_tableau_components()
         return tableau_dimension
 
     def set_space_constraints(self):
@@ -52,12 +53,15 @@ class QuadraticSimplex():
 
     def solve(self):
         while self.solved_status == "Unsolved":
-            #self.output_tableaux()
+            print("#################### NEW ITERATION ####################\n")
+            self.output_tableaux()
+            print(f"Global profit vector: {-1*self.profit_vector}\n")
             self.iterate()
             input()
 
     def iterate(self):
         self.set_updating_tableau()
+        print(f"Updating tableau: {self.updating_tableau.dimension}\n")
         self.updating_tableau.pivot()
         self.set_profit()
         self.compute_partial_positions()
@@ -87,8 +91,13 @@ class QuadraticSimplex():
 
     def output_tableaux(self):
         for tableau in self.tableaux:
-            print("#################################################\n")
+            print("#################### NEW DIMENSION ####################\n")
             tableau.output_all()
+
+    def output_profit(self):
+        print((f"Outputting global profit information\n"
+               f"Profit: {self.profit}\n"
+               f"Profit vector: {self.profit_vector}\n"))
 
     def __str__(self):
         string = (f"Space dimensions: {self.space_dimensions}\n"
@@ -103,4 +112,5 @@ constraint_matrix = np.array([[3, 2],
 constraint_vector = np.array([55, 13, 2, 120])
 
 problem = QuadraticSimplex(constraint_matrix, constraint_vector)
+#problem.output_tableaux()
 problem.solve()
