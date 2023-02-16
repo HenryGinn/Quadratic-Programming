@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sc
+import math
 
 class Tableau():
 
@@ -20,8 +21,10 @@ class Tableau():
     def __init__(self, global_problem, dimension, profit_vector):
         self.dimension = dimension
         self.global_problem = global_problem
+        # Maybe remove these later if they turn out to be unnecessary
         self.constraint_matrix = global_problem.constraint_matrix
         self.constraint_vector = global_problem.constraint_vector
+        self.space_constraints = global_problem.space_constraints
         self.profit_vector = profit_vector
         self.initialise_problem_from_input_data()
         self.pivot_column_index = None
@@ -38,8 +41,8 @@ class Tableau():
         self.total_dimensions = self.space_dimensions + self.slack_dimensions
 
     def set_spatial_and_non_spatial_variables(self):
-        self.spatial_variables = np.array(range(self.space_dimensions))
-        self.slack_variables = np.array(range(self.space_dimensions, self.total_dimensions))
+        self.spatial_variables = np.arange(self.space_dimensions)
+        self.slack_variables = np.arange(self.space_dimensions, self.total_dimensions)
 
     def initialise_basic_and_non_basic_variables(self):
         self.non_basic_variables = np.array(range(self.space_dimensions))
@@ -63,15 +66,15 @@ class Tableau():
     def set_column_filtered_arrays(self):
         self.A_basic = self.tableau[:, self.basic_variables]
         self.A_non_basic = self.tableau[:, self.non_basic_variables]
-        self.c_basic = self.profit_vector[self.basic_variables]
-        self.c_non_basic = self.profit_vector[self.non_basic_variables]
+        self.c_basic = self.global_problem.profit_vector[self.basic_variables]
+        self.c_non_basic = self.global_problem.profit_vector[self.non_basic_variables]
 
     def set_values(self):
         self.values = sc.linalg.lu_solve((self.A_basic_LU, self.A_permute),
                                          self.constraint_vector)
     
     def set_pivot_column(self):
-        pivot_column = self.tableau[:, self.pivot_column_index]
+        pivot_column = self.A_non_basic[:, self.pivot_column_index]
         self.pivot_column = sc.linalg.lu_solve((self.A_basic_LU, self.A_permute),
                                                pivot_column)
 
@@ -128,13 +131,13 @@ class Tableau():
         profit_pivot_column = self.profit_row[self.pivot_column_index]
         value_pivot_row = self.values[self.pivot_row_index]
         profit_row_multiplier = profit_pivot_column/pivot_value
-        potential_profit = self.profit - value_pivot_row*profit_row_multiplier
+        potential_profit = self.profit + value_pivot_row*profit_row_multiplier
         return potential_profit
 
     def pivot(self):
         self.update_basic_and_non_basic_variables()
         self.set_tableau_components()
-        self.set_pivot_column_index()
+        self.set_pivot_column_index() # This will need to be moved to the end of the iteration
 
     def update_basic_and_non_basic_variables(self):
         exiting_variable = self.basic_variables[self.pivot_row_index]
@@ -143,14 +146,18 @@ class Tableau():
         self.non_basic_variables[self.pivot_column_index] = exiting_variable
 
     def set_pivot_column_index(self):
-        self.pivot_column_index = np.argmin(self.profit_row)
-        if self.profit_row[self.pivot_column_index] == 0:
+        self.pivot_column_index = np.argmax(self.profit_row)
+        if self.profit_row[self.pivot_column_index] <= 0:
             print("Optimal!")
 
-    def get_line_of_movement(self):
-        line_reference_vector = self.get_line_reference_vector()
-        line_direction_vector = self.get_line_direction_vector()
+    def compute_partial_position(self):
+        self.set_line_of_movement()
+        self.find_hypersphere_intersection()
 
+    def set_line_of_movement(self):
+        self.line_reference_vector = self.get_line_reference_vector()
+        self.set_line_direction_vector()
+        
     def get_line_reference_vector(self):
         reference_vector = np.array([self.get_spatial_variable_value(dimension)
                                      for dimension in range(self.space_dimensions)])
@@ -162,23 +169,63 @@ class Tableau():
             value = self.basic_variables[index]
         else:
             value = 0
-        print("Value: ", value)
         return value
 
-    def get_line_direction_vector(self):
+    def set_line_direction_vector(self):
         constraint_indices = self.get_constraint_indices()
-        print(constraint_indices)
-        print(self.global_problem.space_constraints)
+        constraint_matrix = self.space_constraints[constraint_indices, :]
+        null_space = sc.linalg.null_space(constraint_matrix)
+        self.check_null_space(null_space)
+        self.line_direction_vector = null_space[:, 0]
 
     def get_constraint_indices(self):
         constraint_indices = np.copy(self.non_basic_variables)
-        removing_indices = constraint_indices == self.pivot_column_index
+        removing_indices = (constraint_indices == self.pivot_column_index)
         constraint_indices = np.delete(constraint_indices, removing_indices)
         return constraint_indices
 
+    def check_null_space(self, null_space):
+        dimension_of_null_space = null_space.shape[1]
+        if dimension_of_null_space != 1:
+            raise Exception((f"Null space for dimension {self.dimension} is not 1 ({dimension_of_null_space})\n"
+                             "Check that constraints are linearly independent"))
+
+    def find_hypersphere_intersection(self):
+        reference_abs, direction_abs, cross_term = self.get_vector_quantities()
+        position_parameters = self.get_position_parameters(reference_abs, direction_abs, cross_term)
+        position_plus, position_minus = self.get_positions(position_parameters)
+        self.set_partial_position(position_plus, position_minus)
+
+    def get_vector_quantities(self):
+        reference_abs = np.dot(self.line_reference_vector, self.line_reference_vector)
+        direction_abs = np.dot(self.line_direction_vector, self.line_direction_vector)
+        cross_term = np.dot(self.line_reference_vector, self.line_direction_vector)
+        return reference_abs, direction_abs, cross_term
+
+    def get_position_parameters(self, reference_abs, direction_abs, cross_term):
+        discriminant = math.sqrt(cross_term**2
+                                 - reference_abs * direction_abs
+                                 + direction_abs * self.global_problem.profit)
+        position_parameter_plus = (-1*cross_term + discriminant) / direction_abs
+        position_parameter_minus = (-1*cross_term - discriminant) / direction_abs
+        return (position_parameter_plus, position_parameter_minus)
+
+    def get_positions(self, position_parameters):
+        position_parameter_plus, position_parameter_minus = position_parameters
+        position_plus = self.line_reference_vector + position_parameter_plus * self.line_direction_vector
+        position_minus = self.line_reference_vector + position_parameter_minus * self.line_direction_vector
+        return position_plus, position_minus
+
+    def set_partial_position(self, position_plus, position_minus):
+        if np.all(position_plus > -0.00001):
+            self.partial_position = position_plus
+        elif np.all(position_minus > -0.00001):
+            self.partial_position = position_minus
+        else:
+            raise Exception(f"Neither intersections with hypersphere are positive for dimension {self.dimension}")
+
     def output_all(self):
         self.output_basic_and_non_basic_variables()
-        self.output_matrices()
         self.output_values()
         self.output_profit_information()
         self.output_vertex_position()
@@ -188,8 +235,7 @@ class Tableau():
         non_basic_variables_string = [str(round(value, 2)) for value in self.non_basic_variables]
         print((f"Outputting basic and non basic variables for dimension {self.dimension}\n"
                f"Basic variables: {', '.join(basic_variables_string)}\n"
-               f"Non-basic variables: {', '.join(non_basic_variables_string)}\n"
-               f"Pivot column index: {self.pivot_column_index}"))
+               f"Non-basic variables: {', '.join(non_basic_variables_string)}\n"))
 
     def output_values(self):
         print(f"Outputting values for dimension {self.dimension}")
@@ -197,28 +243,22 @@ class Tableau():
             print(f"{basic_variable}: {round(value, 2)}")
         print("")
 
-    def output_matrices(self):
-        print(f"Outputting basic and non-basic matrices for dimension {self.dimension}")
-        print(self.A_basic)
-        print(self.A_non_basic)
-
     def output_vertex_position(self):
         print(f"Outputting vertex position for dimension {self.dimension}")
-        self.set_basic_variable_spatial_dict()
-        for spatial_variable in self.spatial_variables:
-            spatial_variable_value = self.get_spatial_variable_value(spatial_variable)
-            print(f"{spatial_variable}: {spatial_variable_value}")
+        vertex_position = self.get_vertex_position()
+        for index, value in enumerate(vertex_position):
+            print(f"{index}: {value}")
         print("")
 
-    def set_basic_variable_spatial_dict(self):
-        basic_variable_spatial_dict = [(variable_name, self.values[index])
-                                       for index, variable_name in enumerate(self.basic_variables)
-                                       if variable_name in self.spatial_variables]
-        self.basic_variable_spatial_dict = dict(basic_variable_spatial_dict)
-
+    def get_vertex_position(self):
+        vertex_position = [self.get_spatial_variable_value(dimension)
+                           for dimension in self.spatial_variables]
+        vertex_position = np.array(vertex_position)
+        return vertex_position
+    
     def get_spatial_variable_value(self, spatial_variable):
         if spatial_variable in self.basic_variables:
-            value = self.basic_variables[self.basic_variables == spatial_variable][0]
+            value = self.values[self.basic_variables == spatial_variable][0]
         else:
             value = 0
         return value
@@ -229,3 +269,9 @@ class Tableau():
         for non_basic_variable, profit_coefficient in zip(self.non_basic_variables, self.profit_row):
             print(f"{non_basic_variable}: {profit_coefficient}")
         print("")
+
+    def output_line_of_movement(self):
+        print((f"Reference vector: {self.line_reference_vector}\n"
+               f"Direction vector: {self.line_direction_vector}\n"
+               f"Dimension: {self.dimension}\n"))
+

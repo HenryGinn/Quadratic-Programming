@@ -1,6 +1,10 @@
 import numpy as np
+import scipy as sc
 from copy import deepcopy
 from Tableau import Tableau
+
+large_width = 400
+np.set_printoptions(linewidth=large_width)
 
 class QuadraticSimplex():
 
@@ -15,14 +19,20 @@ class QuadraticSimplex():
         self.constraint_matrix = constraint_matrix
         self.constraint_vector = constraint_vector
         self.set_dimensions()
-        self.set_initial_tableaux()
         self.set_space_constraints()
+        self.set_initial_tableaux()
         self.solved_status = "Unsolved"
         
     def set_dimensions(self):
         self.space_dimensions = self.constraint_matrix.shape[1]
         self.slack_dimensions = self.constraint_matrix.shape[0]
         self.total_dimensions = self.space_dimensions + self.slack_dimensions
+
+    def set_space_constraints(self):
+        non_negativity_constraints = np.identity(self.space_dimensions)
+        self.space_constraints = np.concatenate((non_negativity_constraints,
+                                                 self.constraint_matrix),
+                                                axis=0)
 
     def set_initial_tableaux(self):
         self.set_initial_profit_vector()
@@ -31,7 +41,7 @@ class QuadraticSimplex():
                          for dimension in range(self.space_dimensions)]
         
     def set_initial_profit_vector(self):
-        profit_function_space = -1*np.ones(self.space_dimensions)
+        profit_function_space = np.ones(self.space_dimensions)
         profit_function_slack = np.zeros(self.slack_dimensions)
         self.profit_vector = np.concatenate((profit_function_space,
                                              profit_function_slack), axis=0)
@@ -45,17 +55,11 @@ class QuadraticSimplex():
         tableau_dimension.set_tableau_components()
         return tableau_dimension
 
-    def set_space_constraints(self):
-        non_negativity_constraints = np.identity(self.space_dimensions)
-        self.space_constraints = np.concatenate((self.constraint_matrix,
-                                                 non_negativity_constraints),
-                                                axis=0)
-
     def solve(self):
         while self.solved_status == "Unsolved":
             print("#################### NEW ITERATION ####################\n")
             self.output_tableaux()
-            print(f"Global profit vector: {-1*self.profit_vector}\n")
+            print(f"Global profit vector: {self.profit_vector}\n")
             self.iterate()
             input()
 
@@ -65,6 +69,7 @@ class QuadraticSimplex():
         self.updating_tableau.pivot()
         self.set_profit()
         self.compute_partial_positions()
+        self.update_profit_vector()
 
     def set_updating_tableau(self):
         potential_profit_list = [tableau.get_potential_profit()
@@ -73,15 +78,27 @@ class QuadraticSimplex():
         self.updating_tableau = self.tableaux[updating_dimension]
 
     def set_profit(self):
-        self.updating_tableau.set_basic_variable_spatial_dict()
-        dict_values = self.updating_tableau.basic_variable_spatial_dict.values()
-        non_trivial_spatial_variables = np.array(list(dict_values))
-        self.profit = sum(non_trivial_spatial_variables**2)
+        updating_tableau_vertex_position = self.updating_tableau.get_vertex_position()
+        self.profit = sum(updating_tableau_vertex_position**2)
 
     def compute_partial_positions(self):
         for tableau in self.tableaux:
             if tableau != self.updating_tableau:
-                tableau.get_line_of_movement()
+                tableau.compute_partial_position()
+            else:
+                tableau.partial_position = self.updating_tableau.get_vertex_position()
+
+    def update_profit_vector(self):
+        self.output_partial_positions()
+        positions = np.vstack([tableau.partial_position for tableau in self.tableaux])
+        print(positions)
+        positions_transpose = np.transpose(positions)
+        gram_matrix = np.matmul(positions, positions_transpose)
+        print(gram_matrix)
+        intermediate_vector = sc.linalg.solve(gram_matrix, np.ones(self.space_dimensions))
+        print(intermediate_vector)
+        self.profit_vector = np.dot(positions_transpose, intermediate_vector)
+        print(self.profit_vector)
 
     def output_problem_constraints(self):
         print("Problem constraints")
@@ -99,6 +116,12 @@ class QuadraticSimplex():
                f"Profit: {self.profit}\n"
                f"Profit vector: {self.profit_vector}\n"))
 
+    def output_partial_positions(self):
+        print("Outputting partial positions")
+        for tableau in self.tableaux:
+            print(f"Dimension: {tableau.dimension}, position: {tableau.partial_position}")
+        print("")
+
     def __str__(self):
         string = (f"Space dimensions: {self.space_dimensions}\n"
                   f"Slack dimensions: {self.slack_dimensions}\n"
@@ -112,5 +135,4 @@ constraint_matrix = np.array([[3, 2],
 constraint_vector = np.array([55, 13, 2, 120])
 
 problem = QuadraticSimplex(constraint_matrix, constraint_vector)
-#problem.output_tableaux()
 problem.solve()
