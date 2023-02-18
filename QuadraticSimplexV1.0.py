@@ -59,12 +59,15 @@ class QuadraticSimplex():
         return tableau_dimension
 
     def solve(self):
+        self.output_tableaux()
+        self.output_profit()
         while self.solved_status == "Unsolved":
             print("#################### NEW ITERATION ####################\n")
             self.iterate()
             self.output_tableaux()
             self.output_profit()
             input()
+        print("Solved!")
 
     def iterate(self):
         self.set_lines_of_movement()
@@ -87,7 +90,8 @@ class QuadraticSimplex():
         tableau_2 = self.tableaux[tableau_index_2]
         if self.reference_vectors_match(tableau_1, tableau_2):
             if self.direction_vectors_match(tableau_1, tableau_2):
-                self.tableau.pop(tableau_1_index)
+                print("Merging!")
+                self.tableaux.pop(tableau_index_1)
 
     def reference_vectors_match(self, tableau_1, tableau_2):
         vector_1 = tableau_1.line_reference_vector
@@ -114,15 +118,18 @@ class QuadraticSimplex():
         old_profit = self.profit
         self.set_profit()
         if abs(old_profit - self.profit) > 0.0001:
-            self.update_global_problem_non_trivial()
+            self.update_tableaux()
+        else:
+            self.update_updating_tableau()
 
     def set_profit(self):
         updating_tableau_vertex_position = self.updating_tableau.get_vertex_position()
-        self.profit = sum(updating_tableau_vertex_position**2)
+        self.profit = math.sqrt(sum(updating_tableau_vertex_position**2))
 
-    def update_global_problem_non_trivial(self):
+    def update_tableaux(self):
         self.compute_partial_positions()
         self.compute_profit_vector()
+        self.update_pivot_columns()
 
     def compute_partial_positions(self):
         for tableau in self.tableaux:
@@ -135,9 +142,16 @@ class QuadraticSimplex():
         positions = np.vstack([tableau.partial_position for tableau in self.tableaux])
         positions_transpose = np.transpose(positions)
         gram_matrix = np.matmul(positions, positions_transpose)
-        intermediate_vector = sc.linalg.solve(gram_matrix, np.ones(self.space_dimensions))
+        intermediate_vector = sc.linalg.solve(gram_matrix, np.ones(len(self.tableaux)))
         profit_normal = np.dot(positions_transpose, intermediate_vector)
         self.set_profit_vector(profit_normal)
+
+    def update_pivot_columns(self):
+        for tableau in self.tableaux:
+            tableau.set_pivot_column_index()
+
+    def update_updating_tableau(self):
+        self.updating_tableau.set_pivot_column_index()
 
     def output_problem_constraints(self):
         print("Problem constraints")
@@ -152,7 +166,7 @@ class QuadraticSimplex():
 
     def output_profit(self):
         print((f"Outputting global profit information\n"
-               f"Profit: {round(math.sqrt(self.profit), 3)}\n"
+               f"Profit: {round(self.profit, 3)}\n"
                f"Profit vector: {self.profit_vector}\n"))
 
     def output_partial_positions(self):
@@ -164,14 +178,20 @@ class QuadraticSimplex():
     def __str__(self):
         string = (f"Space dimensions: {self.space_dimensions}\n"
                   f"Slack dimensions: {self.slack_dimensions}\n"
-                  f"Total dimensions: {self.total_dimensions}\n")
+                  f"Total dimensions: {self.total_dimensions}\n"
+                  f"Solved status: {self.solved_status}/n")
         return string
 
+"""
 constraint_matrix = np.array([[3, 2],
                               [-12, 13],
                               [1, -3],
                               [6, 5]])
 constraint_vector = np.array([55, 13, 2, 120])
+"""
+constraint_matrix = np.array([[1, 0],
+                              [0, 1]])
+constraint_vector = np.array([1, 0])
 
 problem = QuadraticSimplex(constraint_matrix, constraint_vector)
 problem.solve()

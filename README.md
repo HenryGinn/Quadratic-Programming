@@ -75,8 +75,12 @@ Iteration:
 3: For all points, determine which vertex the linear objective function will hit next.
 4: Determine which point is going to be updated by finding which one increases the quadratic profit the least if it were to be moved to it's next vertex.
 5: Update the basic and non-basic variables of the chosen point.
-6: If the point moved, update the objective function.
-7: Set the pivot columns
+6a: If the point moved
+	Compute partial positions of all points
+	Compute new linear objective function
+	Update all pivot columns
+6b: If the point didn't move
+	Update pivot column of updated point
 
 ################## COMPUTATION OF NEW LINEAR PROFIT FUNCTION ##################
 
@@ -89,7 +93,7 @@ Iteration:
     We can write the line as r = v_1 + s*v_2 where v_1 and v_2 are the position and direction vectors respectively. Substituting into r dot r = P gives a quadratic in the parameter s which can be solved to give s = (-v_1 dot v_2 +- sqrt((v_1 dot v_2)^2 - |v_1|^2 * |v_2|^2 + |v_2|^2 * P))/|v_2|^2. The plus minus ambiguity comes from the fact that a line intersects a hypersphere in two places. We choose the one in the region where all the spatial variables are non negative (note that this is well defined)
 
 3: Defining the hyperplane
-    In an N dimensional space, a hyperplane has dimension N-1. All hyperplanes can be described by a linear combination of spatial variables equalling a constant. For each of the n points in our n dimensional space, we need them to lie in the hyperplane, i.e. satisfy the equation. We can describe this system of linear equations with a matrix. If a pair of points are equal then the system will be underdefined - this is the situation where the hyperplane spans fewer than n-1 dimensions and has become degenerate. This is not a problem and is in fact expected when the algorithm converges. We can solve the system using the pseudoinverse. Without loss of generality we choose the constant of the hyperplane to be 1 for the purposes of finding the hyperplane, all this does is fix a scaling for the linear combination. As the matrix is never overdetermined we can always solve this system. The pseudoinverse is given by A^+ = A^T (A A^T)^-1 which means our system we need to solve is v = A^+ 1 = A^T (A A^T)^-1 1. If we set w = (A A^T)^-1 1 then w is the solution to (A A^T) 1, and we have v = A^T w.
+    In an N dimensional space, a hyperplane has dimension N-1. All hyperplanes can be described by a linear combination of spatial variables equalling a constant. For each of the n points in our n dimensional space, we need them to lie in the hyperplane, i.e. satisfy the equation. We can describe this system of linear equations with a matrix. If a pair of points are equal then the system will be underdefined - this is the situation where the hyperplane spans fewer than n-1 dimensions and has become degenerate. This is not a problem and is in fact expected when the algorithm converges. We can solve the system using the pseudoinverse. Without loss of generality we choose the constant of the hyperplane to be 1 for the purposes of finding the hyperplane, all this does is fix a scaling for the linear combination. As the matrix is never overdetermined we can always solve this system. The pseudoinverse is given by A^+ = A^T (A A^T)^-1 which means the system we need to solve is v = A^+ 1 = A^T (A A^T)^-1 1. If we set w = (A A^T)^-1 1 then w is the solution to (A A^T) 1, and we have v = A^T w.
     
     We note that we will also have a lower rank matrix if there exist triples of colinear points. We expect that this should not happen if the points have been properly merged once convergence has been detected, but it is not known whether this is the case or not.
 

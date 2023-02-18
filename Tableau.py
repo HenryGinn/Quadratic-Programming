@@ -1,5 +1,5 @@
 import numpy as np
-import scipy as sc
+import scipy.linalg as sc_la
 import math
 
 class Tableau():
@@ -56,7 +56,7 @@ class Tableau():
 
     def set_tableau_components(self):
         self.set_column_filtered_arrays()
-        self.A_basic_LU, self.A_permute = sc.linalg.lu_factor(self.A_basic)
+        self.A_basic_LU, self.A_permute = sc_la.lu_factor(self.A_basic)
         self.set_values()
         self.set_pivot_column()
         self.set_profit_row()
@@ -69,16 +69,16 @@ class Tableau():
         self.c_non_basic = self.global_problem.profit_vector[self.non_basic_variables]
 
     def set_values(self):
-        self.values = sc.linalg.lu_solve((self.A_basic_LU, self.A_permute),
+        self.values = sc_la.lu_solve((self.A_basic_LU, self.A_permute),
                                          self.constraint_vector)
     
     def set_pivot_column(self):
         pivot_column = self.A_non_basic[:, self.pivot_column_index]
-        self.pivot_column = sc.linalg.lu_solve((self.A_basic_LU, self.A_permute),
+        self.pivot_column = sc_la.lu_solve((self.A_basic_LU, self.A_permute),
                                                pivot_column)
 
     def set_profit_row(self):
-        intermediate_vector = sc.linalg.lu_solve((self.A_basic_LU, self.A_permute),
+        intermediate_vector = sc_la.lu_solve((self.A_basic_LU, self.A_permute),
                                                  self.c_basic, trans = 1)
         self.profit_row = self.c_non_basic - np.dot(np.transpose(self.A_non_basic),
                                                     intermediate_vector)
@@ -126,23 +126,34 @@ class Tableau():
         return potential_profit
 
     def compute_potential_profit(self):
-        pivot_value = self.pivot_column[self.pivot_row_index]
-        potential_values = [self.values[self.pivot_row_index] / self.pivot_column[self.pivot_row_index]]
-        potential_values += [self.get_potential_value(row_index)
-                             for row_index in range(len(self.basic_variables))
-                             if self.basic_variables[row_index] in self.spatial_variables]
-        potential_profit = sum(np.array(potential_values)**2)
+        self.pivot_value = self.pivot_column[self.pivot_row_index]
+        potential_values = self.get_potential_values()
+        potential_profit = math.sqrt(sum(np.array(potential_values)**2))
         return potential_profit
 
-    def get_potential_value(self, row_index):
-        multiplier = self.pivot_column[row_index] / self.pivot_column[self.pivot_row_index]
-        value = self.values[row_index] - multiplier * self.values[self.pivot_row_index]
+    def get_potential_values(self):
+        potential_values = [self.get_potential_value(spatial_variable)
+                            for spatial_variable in self.spatial_variables]
+        return potential_values
+
+    def get_potential_value(self, spatial_variable):
+        if spatial_variable == self.non_basic_variables[self.pivot_column_index]:
+            value = self.values[self.pivot_row_index] / self.pivot_column[self.pivot_row_index]
+        elif spatial_variable in self.basic_variables:
+            value = self.get_potential_spatial_basic_value(spatial_variable)
+        else:
+            value = 0
+        return value
+
+    def get_potential_spatial_basic_value(self, spatial_variable):
+        basic_variable_index = np.where(self.basic_variables == spatial_variable)[0][0]
+        multiplier = self.pivot_column[basic_variable_index] / self.pivot_column[self.pivot_row_index]
+        value = self.values[basic_variable_index] - multiplier * self.values[self.pivot_row_index]
         return value
 
     def pivot(self):
         self.update_basic_and_non_basic_variables()
         self.set_tableau_components()
-        self.set_pivot_column_index() # This will need to be moved to the end of the iteration
 
     def update_basic_and_non_basic_variables(self):
         exiting_variable = self.basic_variables[self.pivot_row_index]
@@ -152,8 +163,8 @@ class Tableau():
 
     def set_pivot_column_index(self):
         self.pivot_column_index = np.argmax(self.profit_row)
-        if self.profit_row[self.pivot_column_index] <= 0:
-            print("Optimal!")
+        if self.profit_row[self.pivot_column_index] <= 0.0001:
+            self.global_problem.solved_status = "Optimal"
 
     def compute_partial_position(self):
         self.set_line_of_movement()
@@ -179,18 +190,13 @@ class Tableau():
     def set_line_direction_vector(self):
         constraint_indices = self.get_constraint_indices()
         constraint_matrix = self.space_constraints[constraint_indices, :]
-        print(f"Constraint indices: {constraint_indices}")
-        print(f"Constraint matrix: {constraint_matrix}")
-        null_space = sc.linalg.null_space(constraint_matrix)
+        null_space = sc_la.null_space(constraint_matrix)
         self.check_null_space(null_space)
         self.line_direction_vector = null_space[:, 0]
 
     def get_constraint_indices(self):
-        print(f"Non basic: {self.non_basic_variables}")
         constraint_indices = np.copy(self.non_basic_variables)
-        removing_indices = (constraint_indices == self.pivot_column_index)
-        print(f"Pivot column index: {self.pivot_column_index}, removing indicies: {removing_indices}")
-        constraint_indices = np.delete(constraint_indices, removing_indices)
+        constraint_indices = np.delete(constraint_indices, self.pivot_column_index)
         return constraint_indices
 
     def check_null_space(self, null_space):
@@ -214,7 +220,7 @@ class Tableau():
     def get_position_parameters(self, reference_abs, direction_abs, cross_term):
         discriminant = math.sqrt(cross_term**2
                                  - reference_abs * direction_abs
-                                 + direction_abs * self.global_problem.profit)
+                                 + direction_abs * self.global_problem.profit**2)
         position_parameter_plus = (-1*cross_term + discriminant) / direction_abs
         position_parameter_minus = (-1*cross_term - discriminant) / direction_abs
         return (position_parameter_plus, position_parameter_minus)
