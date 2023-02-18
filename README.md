@@ -70,12 +70,13 @@ Initialisation:
 3: The pivot column of each point is prescribed to point along one of the axes.
 
 Iteration:
-1: For all points, determine which vertex the linear objective function will hit next.
-2: Determine which point is going to be updated by finding which one increases the quadratic profit the least if it were to be moved to it's next vertex.
-2: Update the basic and non-basic variables of the chosen point.
-3: If the point moved, update the objective function.
-4: Compute the new pivot column and direction lines for all the points.
-5: Check if any points have converged to each other and merge these points.
+1: The reference and direction vector are set for each tableau
+2: Check if any points have converged to each other and merge these points.
+3: For all points, determine which vertex the linear objective function will hit next.
+4: Determine which point is going to be updated by finding which one increases the quadratic profit the least if it were to be moved to it's next vertex.
+5: Update the basic and non-basic variables of the chosen point.
+6: If the point moved, update the objective function.
+7: Set the pivot columns
 
 ################## COMPUTATION OF NEW LINEAR PROFIT FUNCTION ##################
 

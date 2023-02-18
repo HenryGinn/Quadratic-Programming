@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sc
+import math
 from copy import deepcopy
 from Tableau import Tableau
 
@@ -35,17 +36,19 @@ class QuadraticSimplex():
                                                 axis=0)
 
     def set_initial_tableaux(self):
-        self.set_initial_profit_vector()
+        self.set_initial_profit_information()
         initial_tableau = Tableau(self, -1, self.profit_vector)
         self.tableaux = [self.create_tableau_dimension(initial_tableau, dimension)
                          for dimension in range(self.space_dimensions)]
         
-    def set_initial_profit_vector(self):
-        profit_function_space = np.ones(self.space_dimensions)
-        profit_function_slack = np.zeros(self.slack_dimensions)
-        self.profit_vector = np.concatenate((profit_function_space,
-                                             profit_function_slack), axis=0)
+    def set_initial_profit_information(self):
+        profit_normal = np.ones(self.space_dimensions)
+        self.set_profit_vector(profit_normal)
         self.profit = 0
+
+    def set_profit_vector(self, normal):
+        profit_vector_slack = np.zeros(self.slack_dimensions)
+        self.profit_vector = np.concatenate((normal, profit_vector_slack), axis=0)
 
     def create_tableau_dimension(self, initial_tableau, dimension):
         tableau_dimension = deepcopy(initial_tableau)
@@ -58,18 +61,48 @@ class QuadraticSimplex():
     def solve(self):
         while self.solved_status == "Unsolved":
             print("#################### NEW ITERATION ####################\n")
-            self.output_tableaux()
-            print(f"Global profit vector: {self.profit_vector}\n")
             self.iterate()
+            self.output_tableaux()
+            self.output_profit()
             input()
 
     def iterate(self):
+        self.set_lines_of_movement()
+        self.merge_any_converged_pairs()
         self.set_updating_tableau()
-        print(f"Updating tableau: {self.updating_tableau.dimension}\n")
         self.updating_tableau.pivot()
-        self.set_profit()
-        self.compute_partial_positions()
-        self.update_profit_vector()
+        self.update_global_problem()
+
+    def set_lines_of_movement(self):
+        for tableau in self.tableaux:
+            tableau.set_line_of_movement()
+
+    def merge_any_converged_pairs(self):
+        for tableau_index_1 in range(len(self.tableaux)):
+            for tableau_index_2 in range(tableau_index_1 + 1, len(self.tableaux)):
+                self.check_if_merged(tableau_index_1, tableau_index_2)
+
+    def check_if_merged(self, tableau_index_1, tableau_index_2):
+        tableau_1 = self.tableaux[tableau_index_1]
+        tableau_2 = self.tableaux[tableau_index_2]
+        if self.reference_vectors_match(tableau_1, tableau_2):
+            if self.direction_vectors_match(tableau_1, tableau_2):
+                self.tableau.pop(tableau_1_index)
+
+    def reference_vectors_match(self, tableau_1, tableau_2):
+        vector_1 = tableau_1.line_reference_vector
+        vector_2 = tableau_2.line_reference_vector
+        difference = abs(vector_1 - vector_2)
+        vectors_match = (sum(difference) < 0.0001)
+        return vectors_match
+
+    def direction_vectors_match(self, tableau_1, tableau_2):
+        vector_1 = tableau_1.line_direction_vector
+        vector_2 = tableau_2.line_direction_vector
+        cross_term = np.dot(vector_1, vector_2)*np.dot(vector_1, vector_2)
+        abs_values = np.dot(vector_1, vector_1)*np.dot(vector_2, vector_2)
+        vectors_match = (cross_term > abs_values*0.99999)
+        return vectors_match
 
     def set_updating_tableau(self):
         potential_profit_list = [tableau.get_potential_profit()
@@ -77,28 +110,34 @@ class QuadraticSimplex():
         updating_dimension = np.argmin(potential_profit_list)
         self.updating_tableau = self.tableaux[updating_dimension]
 
+    def update_global_problem(self):
+        old_profit = self.profit
+        self.set_profit()
+        if abs(old_profit - self.profit) > 0.0001:
+            self.update_global_problem_non_trivial()
+
     def set_profit(self):
         updating_tableau_vertex_position = self.updating_tableau.get_vertex_position()
         self.profit = sum(updating_tableau_vertex_position**2)
 
+    def update_global_problem_non_trivial(self):
+        self.compute_partial_positions()
+        self.compute_profit_vector()
+
     def compute_partial_positions(self):
         for tableau in self.tableaux:
             if tableau != self.updating_tableau:
-                tableau.compute_partial_position()
+                tableau.find_hypersphere_intersection()
             else:
                 tableau.partial_position = self.updating_tableau.get_vertex_position()
 
-    def update_profit_vector(self):
-        self.output_partial_positions()
+    def compute_profit_vector(self):
         positions = np.vstack([tableau.partial_position for tableau in self.tableaux])
-        print(positions)
         positions_transpose = np.transpose(positions)
         gram_matrix = np.matmul(positions, positions_transpose)
-        print(gram_matrix)
         intermediate_vector = sc.linalg.solve(gram_matrix, np.ones(self.space_dimensions))
-        print(intermediate_vector)
-        self.profit_vector = np.dot(positions_transpose, intermediate_vector)
-        print(self.profit_vector)
+        profit_normal = np.dot(positions_transpose, intermediate_vector)
+        self.set_profit_vector(profit_normal)
 
     def output_problem_constraints(self):
         print("Problem constraints")
@@ -113,7 +152,7 @@ class QuadraticSimplex():
 
     def output_profit(self):
         print((f"Outputting global profit information\n"
-               f"Profit: {self.profit}\n"
+               f"Profit: {round(math.sqrt(self.profit), 3)}\n"
                f"Profit vector: {self.profit_vector}\n"))
 
     def output_partial_positions(self):

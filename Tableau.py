@@ -25,7 +25,6 @@ class Tableau():
         self.constraint_matrix = global_problem.constraint_matrix
         self.constraint_vector = global_problem.constraint_vector
         self.space_constraints = global_problem.space_constraints
-        self.profit_vector = profit_vector
         self.initialise_problem_from_input_data()
         self.pivot_column_index = None
 
@@ -128,11 +127,17 @@ class Tableau():
 
     def compute_potential_profit(self):
         pivot_value = self.pivot_column[self.pivot_row_index]
-        profit_pivot_column = self.profit_row[self.pivot_column_index]
-        value_pivot_row = self.values[self.pivot_row_index]
-        profit_row_multiplier = profit_pivot_column/pivot_value
-        potential_profit = self.profit + value_pivot_row*profit_row_multiplier
+        potential_values = [self.values[self.pivot_row_index] / self.pivot_column[self.pivot_row_index]]
+        potential_values += [self.get_potential_value(row_index)
+                             for row_index in range(len(self.basic_variables))
+                             if self.basic_variables[row_index] in self.spatial_variables]
+        potential_profit = sum(np.array(potential_values)**2)
         return potential_profit
+
+    def get_potential_value(self, row_index):
+        multiplier = self.pivot_column[row_index] / self.pivot_column[self.pivot_row_index]
+        value = self.values[row_index] - multiplier * self.values[self.pivot_row_index]
+        return value
 
     def pivot(self):
         self.update_basic_and_non_basic_variables()
@@ -174,13 +179,17 @@ class Tableau():
     def set_line_direction_vector(self):
         constraint_indices = self.get_constraint_indices()
         constraint_matrix = self.space_constraints[constraint_indices, :]
+        print(f"Constraint indices: {constraint_indices}")
+        print(f"Constraint matrix: {constraint_matrix}")
         null_space = sc.linalg.null_space(constraint_matrix)
         self.check_null_space(null_space)
         self.line_direction_vector = null_space[:, 0]
 
     def get_constraint_indices(self):
+        print(f"Non basic: {self.non_basic_variables}")
         constraint_indices = np.copy(self.non_basic_variables)
         removing_indices = (constraint_indices == self.pivot_column_index)
+        print(f"Pivot column index: {self.pivot_column_index}, removing indicies: {removing_indices}")
         constraint_indices = np.delete(constraint_indices, removing_indices)
         return constraint_indices
 
