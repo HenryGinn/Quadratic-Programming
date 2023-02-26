@@ -3,6 +3,7 @@ import scipy as sc
 import math
 from copy import deepcopy
 from Tableau import Tableau
+from PlotState import PlotState
 
 large_width = 400
 np.set_printoptions(linewidth=large_width)
@@ -16,6 +17,8 @@ class QuadraticSimplex():
     For more details on the algorithm, implementation, and formulation
     of quadratic problems into this form see the README document. """
 
+    option_plot_state = True
+
     def __init__(self, constraint_matrix, constraint_vector):
         self.constraint_matrix = constraint_matrix
         self.constraint_vector = constraint_vector
@@ -23,6 +26,7 @@ class QuadraticSimplex():
         self.set_space_constraints()
         self.set_initial_tableaux()
         self.solved_status = "Unsolved"
+        self.plot_obj = PlotState(self)
         
     def set_dimensions(self):
         self.space_dimensions = self.constraint_matrix.shape[1]
@@ -59,14 +63,10 @@ class QuadraticSimplex():
         return tableau_dimension
 
     def solve(self):
-        self.output_tableaux()
-        self.output_profit()
         while self.solved_status == "Unsolved":
-            print("#################### NEW ITERATION ####################\n")
             self.iterate()
-            self.output_tableaux()
             self.output_profit()
-            input()
+            self.plot_obj.plot()
         print("Solved!")
 
     def iterate(self):
@@ -182,16 +182,29 @@ class QuadraticSimplex():
                   f"Solved status: {self.solved_status}/n")
         return string
 
-"""
+
 constraint_matrix = np.array([[3, 2],
                               [-12, 13],
                               [1, -3],
                               [6, 5]])
 constraint_vector = np.array([55, 13, 2, 120])
 """
+constraint_matrix = np.array([[-3, 1],
+                              [3, 5],
+                              [1, -3],
+                              [9, 8]])
+constraint_vector = np.array([3, 90, 2, 180])
+
+constraint_matrix = np.array([[-0.9, 1],
+                              [1.1, -1],
+                              [1, 1],
+                              [1, 1.01]])
+constraint_vector = np.array([5, 5, 20, 20.1])
+
 constraint_matrix = np.array([[1, 0],
                               [0, 1]])
 constraint_vector = np.array([1, 0])
+"""
 
 problem = QuadraticSimplex(constraint_matrix, constraint_vector)
 problem.solve()
