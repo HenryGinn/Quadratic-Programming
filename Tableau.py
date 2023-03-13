@@ -128,6 +128,7 @@ class Tableau():
     def compute_potential_profit(self):
         self.pivot_value = self.pivot_column[self.pivot_row_index]
         potential_values = self.get_potential_values()
+        print(f"Potential values: {potential_values}\n")
         potential_profit = math.sqrt(sum(np.array(potential_values)**2))
         return potential_profit
 
@@ -163,6 +164,8 @@ class Tableau():
 
     def set_pivot_column_index(self):
         self.pivot_column_index = np.argmax(self.profit_row)
+        print(f"Pivot column index: {self.pivot_column_index}")
+        print(f"Profit row: {self.profit_row}\n")
         if self.profit_row[self.pivot_column_index] <= 0.0001:
             self.global_problem.solved_status = "Optimal"
 
@@ -173,6 +176,7 @@ class Tableau():
     def set_line_of_movement(self):
         self.line_reference_vector = self.get_line_reference_vector()
         self.set_line_direction_vector()
+        self.output_line_of_movement()
         
     def get_line_reference_vector(self):
         reference_vector = np.array([self.get_spatial_variable_value(dimension)

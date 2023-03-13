@@ -1,57 +1,55 @@
 # Quadratic-Programming
 
-################################### CONTENTS ###################################
+## CONTENTS
 
-1:  OVERVIEW
-2:  TERMINOLOGY
-3:  HOW BASIC VARIABLES DEFINE A VERTEX
-4:  HOW THE QUADRATIC ALGORITHM WORKS
-5:  COMPUTATION OF NEW LINEAR PROFIT FUNCTION
-6:  CHOOSING THE PIVOT ROW
-7:  CONVERGENCE AND NON-UNIQUENESS
-8:  DISCUSSION ON DEGENERATIVE SITUATIONS
-9:  LINEAR ALGEBRA IMPLEMENTATION OF SIMPLEX
-10: DETERMINING UNIQUENESS OF SOLUTIONS
+1. [Overview](#overview)
+1. [Terminology](#terminology)
+1. [How Basic Variables Define a Vertex](#how-basic-variables-define-a-vertex)
+1. [How The Quadratic Algorithm Works](#how-the-quadratic-algorithm-works)
+1. [Computation of New Linear Profit Function](#computation-of-new-linear-profit-function)
+1. [Choosing The Profit Row](#choosing-the-profit-row)
+1. [Convergence and Non-Uniqueness](#convergence-and-non-uniqueness)
+1. [Discussion of Degenerative Situations](#discussion-of-degenerative-situations)
+1. [Linear Algebra Implementation of Simplex](#linear-algebra-implementation-of-simplex)
+1. [Determining Uniqueness of Solutions](#determining-uniqueness-of-solutions)
 
-################################### OVERVIEW ###################################
+## Overview
 
 Implementation of a modified simplex algorithm to maximise x^Tx subject to Ax <= b. All variables are also non negative.
 
 The profit function is described by a hyperplane which is defined in terms of several points, one for each spatial dimension. This function changes as the points move around the region, and when all the points converge the algorithm terminates.
 
-Formulation issues:
-    1: If the positivity constraint on a variable, x, is undesired it can be rewritten as x = x_plus - x_minus. This should be done before next step as expanding (x_plus - x_minus)^2 will introduce a cross term, 2 * x_plus * x_minus.
-    
-    2: All positive definite quadratic programming problems can be translated, rotated, and rescaled into the correct form for this algorithm to work.
+### Formulation Issues
+- If the positivity constraint on a variable, x, is undesired it can be rewritten as x = x_plus - x_minus. This should be done before next step as expanding (x_plus - x_minus)^2 will introduce a cross term, 2 * x_plus * x_minus.
+- All positive definite quadratic programming problems can be translated, rotated, and rescaled into the correct form for this algorithm to work.
+- If a constraint is required to hold as an equality it can be written as two inequalities as follows. c^Tx = b becomes c^Tx <= b and -c^Tx <= -b.
 
-    3: If a constraint is required to hold as an equality it can be written as two inequalities as follows. c^Tx = b becomes c^Tx <= b and -c^Tx <= -b.
+## Terminology
 
-################################# TERMINOLOGY #################################
+### Variable Types
+- Space/spacial: these are variables like x, y, and z. There is one for each dimension of space we are working in. This will be referred to as n.
+- Slack/constraint: these are the variables that are associated with a constraint. They are what make up the difference in an inequality. If x + 2y <= 4, then s = 4 - x - 2y so that x + 2y + s = 4 is now an equality.
+- Basic: these are the variables that are not necessarily 0 that define which constraints are not necessarily active. The equations are written so that the value of these variables can be read off immediately (there is a bijection between equations and the basic variables, and the coefficient of the basic variables is 1). With this definition it can be seen that if the tableaux is restricted to the columns of the basic variables, it will be a permutation matrix.
+- Non-basic: these are the variables that are not basic variables. The constraints associated with non-basic variables hold with equality.
 
-Variable types:
-    Space/spacial: these are variables like x, y, and z. There is one for each dimension of space we are working in. This will be referred to as n.
-    Slack/constraint: these are the variables that are associated with a constraint. They are what make up the difference in an inequality. If x + 2y <= 4, then s = 4 - x - 2y so that x + 2y + s = 4 is now an equality.
-    Basic: these are the variables that are not necessarily 0 that define which constraints are not necessarily active. The equations are written so that the value of these variables can be read off immediately (there is a bijection between equations and the basic variables, and the coefficient of the basic variables is 1). With this definition it can be seen that if the tableaux is restricted to the columns of the basic variables, it will be a permutation matrix.
-    Non-basic: these are the variables that are not basic variables. The constraints associated with non-basic variables hold with equality.
+### Problem Dimensions
+- Space_dimension: this is the dimension of the space we are working in. It is the number of variables like x, y, z. It is also equal to the number of non basic variables there are.
+- Slack_dimension: this is the number of slack variables (equivalently constraints) there are. it is also equal to the number of basic variables
+- Total_dimension: this is the sum of space_dimension and slack_dimension - the total number of variables
 
-Problem dimensions:
-    space_dimension: this is the dimension of the space we are working in. It is the number of variables like x, y, z. It is also equal to the number of non basic variables there are.
-    slack_dimension: this is the number of slack variables (equivalently constraints) there are. it is also equal to the number of basic variables
-    total_dimension: this is the sum of space_dimension and slack_dimension - the total number of variables
+### Other Terms
+- Feasible region: this is the set of points that satisfy all the constraints. It is a convex polytope (if it is unbounded then there is no global maximum)
+- Verticies: the corners of the feasible region.
+- Exiting variable: this is a basic variable that is becoming a non-basic variable. It is the variable given by the pivot column
+- Entering variable: this is a non-basic variable that is becoming a basic variable. It is the variable given by the pivot row.
 
-Other terms:
-    Feasible region: this is the set of points that satisfy all the constraints. It is a convex polytope (if it is unbounded then there is no global maximum)
-    Verticies: the corners of the feasible region.
-    Exiting variable: this is a basic variable that is becoming a non-basic variable. It is the variable given by the pivot column
-    Entering variable: this is a non-basic variable that is becoming a basic variable. It is the variable given by the pivot row.
-
-##################### HOW BASIC VARIABLES DEFINE A VERTEX #####################
+## How Basic Variables Define a Vertex
 
 Every slack variable has a constraint associated with it. We can also associate a constraint with the spatial variables in the following way: for the variable x, we have the constraint x >= 0. If a variable is non-zero, that means we are at a point where that constraint does not hold with equality - the variable has to be non zero to take up the slack. If a variable is non-basic, that means it is necessarily 0, and we are at a point on the constraint associated with that variable.
 
 In a 2D problem we start at (x, y) = (0, 0). At this point, we are touching the lines x=0 and y=0. If we were not touching the constraint x => 0 for example, then the variable x would necessarily be non-zero. The non-basic variables in this case are x and y. Warning: just because a constraint holds with equality, it does not mean the variable associated with it is non-basic. For example if there was a constraint given by x - y <= 0 we would still be starting at (0, 0) with x and y as non-basic variables. Writing the constraint in equation form with a slack variable, x - y + s = 0, we can see that at the origin s = 0 holds. This means that if the non-basic variables were x and s or y and s, we would also be at (0, 0). This happens when three or more constraints intersect at a point (or along a line, or in general, on a facet).
 
-###################### HOW THE QUADRATIC ALGORITHM WORKS ######################
+## How The Quadratic Algorithm Works
 
 We start off at the origin with a profit function given by the sum of all spatial variables. If the simplex algorithm was to be applied, there would be a choice of n different columns to have as the pivot column (one for each spatial dimension). This is because the profit is increased at the same rate for each of the variables. We split the problem into n, and initialise each of the new tableaux by picking a different pivot column. This is the same as asking the points to point in the directions of the different axes.
 
@@ -65,39 +63,42 @@ The process described in the previous two paragraphs is then repeated. When any 
 
 Below is an overview of the algorithm
 Initialisation:
-1: Objective function is defined as the hyperplane with the normal vector with all it's components equal to 1.
-2: n points are defined where all spatial coordinates are non-basic (this describes the origin).
-3: The pivot column of each point is prescribed to point along one of the axes.
+1. Objective function is defined as the hyperplane with the normal vector with all it's components equal to 1.
+1. n points are defined where all spatial coordinates are non-basic (this describes the origin).
+1. The pivot column of each point is prescribed to point along one of the axes.
 
 Iteration:
-1: The reference and direction vector are set for each tableau
-2: Check if any points have converged to each other and merge these points.
-3: For all points, determine which vertex the linear objective function will hit next.
-4: Determine which point is going to be updated by finding which one increases the quadratic profit the least if it were to be moved to it's next vertex.
-5: Update the basic and non-basic variables of the chosen point.
-6a: If the point moved
-	Compute partial positions of all points
-	Compute new linear objective function
-	Update all pivot columns
-6b: If the point didn't move
-	Update pivot column of updated point
+1. The reference and direction vector are set for each tableau
+1. Check if any points have converged to each other and merge these points.
+1. For all points, determine which vertex the linear objective function will hit next.
+1. Determine which point is going to be updated by finding which one increases the quadratic profit the least if it were to be moved to it's next vertex.
+1. Update the basic and non-basic variables of the chosen point.
+    - If the point moved
+        Compute partial positions of all points
+        Compute new linear objective function
+        Update all pivot columns
+    - If the point didn't move
+    	Update pivot column of updated point
 
-################## COMPUTATION OF NEW LINEAR PROFIT FUNCTION ##################
+## Computation of New Linear Profit Function
 
-1: Finding the line each point is moving on
-    A line is defined by 2 vectors: a position vector, and a direction vector. A position vector can be found immediately by the position of the vertex where the point lies, and this is found by value of the spatial variables. These variables are either non-basic variables in which case they are 0, or they are basic variables and their values can be read directly off the tableau for that point.
+### Finding the Line Each Point is Moving on
 
-    For the direction vector, we construct a matrix where the rows are the coefficients of the constraints that define the line. When a point moves from one vertex to another, one of the basic variables becomes non-basic, and one of the non-basic variables becomes basic. The non-basic variables that were not changed correspond to the constraints that define the line that the point moves along as it goes from the old vertex to the new vertex. The number of non-basic variables is equal to the number of spatial variables, so this matrix will be of size n-1 by n (the constraints are originally defined in terms of the n spatial variables). The constraints should all be linearly independent, so this leaves a null space of dimension 1 which gives us our direction vector.
+A line is defined by 2 vectors: a position vector, and a direction vector. A position vector can be found immediately by the position of the vertex where the point lies, and this is found by value of the spatial variables. These variables are either non-basic variables in which case they are 0, or they are basic variables and their values can be read directly off the tableau for that point.
 
-2: Intersection of a line and the hypersphere P = x^Tx
-    We can write the line as r = v_1 + s*v_2 where v_1 and v_2 are the position and direction vectors respectively. Substituting into r dot r = P gives a quadratic in the parameter s which can be solved to give s = (-v_1 dot v_2 +- sqrt((v_1 dot v_2)^2 - |v_1|^2 * |v_2|^2 + |v_2|^2 * P))/|v_2|^2. The plus minus ambiguity comes from the fact that a line intersects a hypersphere in two places. We choose the one in the region where all the spatial variables are non negative (note that this is well defined)
+For the direction vector, we construct a matrix where the rows are the coefficients of the constraints that define the line. When a point moves from one vertex to another, one of the basic variables becomes non-basic, and one of the non-basic variables becomes basic. The non-basic variables that were not changed correspond to the constraints that define the line that the point moves along as it goes from the old vertex to the new vertex. The number of non-basic variables is equal to the number of spatial variables, so this matrix will be of size n-1 by n (the constraints are originally defined in terms of the n spatial variables). The constraints should all be linearly independent, so this leaves a null space of dimension 1 which gives us our direction vector.
 
-3: Defining the hyperplane
-    In an N dimensional space, a hyperplane has dimension N-1. All hyperplanes can be described by a linear combination of spatial variables equalling a constant. For each of the n points in our n dimensional space, we need them to lie in the hyperplane, i.e. satisfy the equation. We can describe this system of linear equations with a matrix. If a pair of points are equal then the system will be underdefined - this is the situation where the hyperplane spans fewer than n-1 dimensions and has become degenerate. This is not a problem and is in fact expected when the algorithm converges. We can solve the system using the pseudoinverse. Without loss of generality we choose the constant of the hyperplane to be 1 for the purposes of finding the hyperplane, all this does is fix a scaling for the linear combination. As the matrix is never overdetermined we can always solve this system. The pseudoinverse is given by A^+ = A^T (A A^T)^-1 which means the system we need to solve is v = A^+ 1 = A^T (A A^T)^-1 1. If we set w = (A A^T)^-1 1 then w is the solution to (A A^T) 1, and we have v = A^T w.
-    
-    We note that we will also have a lower rank matrix if there exist triples of colinear points. We expect that this should not happen if the points have been properly merged once convergence has been detected, but it is not known whether this is the case or not.
+### Intersection of a Line and The Hypersphere $P = x^Tx$
 
-############################ CHOOSING THE PIVOT ROW ############################
+We can write the line as r = v_1 + s*v_2 where v_1 and v_2 are the position and direction vectors respectively. Substituting into r dot r = P gives a quadratic in the parameter s which can be solved to give s = (-v_1 dot v_2 +- sqrt((v_1 dot v_2)^2 - |v_1|^2 * |v_2|^2 + |v_2|^2 * P))/|v_2|^2. The plus minus ambiguity comes from the fact that a line intersects a hypersphere in two places. We choose the one in the region where all the spatial variables are non negative (note that this is well defined)
+
+### Defining The Hyperplane
+
+In an N dimensional space, a hyperplane has dimension N-1. All hyperplanes can be described by a linear combination of spatial variables equalling a constant. For each of the n points in our n dimensional space, we need them to lie in the hyperplane, i.e. satisfy the equation. We can describe this system of linear equations with a matrix. If a pair of points are equal then the system will be underdefined - this is the situation where the hyperplane spans fewer than n-1 dimensions and has become degenerate. This is not a problem and is in fact expected when the algorithm converges. We can solve the system using the pseudoinverse. Without loss of generality we choose the constant of the hyperplane to be 1 for the purposes of finding the hyperplane, all this does is fix a scaling for the linear combination. As the matrix is never overdetermined we can always solve this system. The pseudoinverse is given by A^+ = A^T (A A^T)^-1 which means the system we need to solve is v = A^+ 1 = A^T (A A^T)^-1 1. If we set w = (A A^T)^-1 1 then w is the solution to (A A^T) 1, and we have v = A^T w.
+
+We note that we will also have a lower rank matrix if there exist triples of colinear points. We expect that this should not happen if the points have been properly merged once convergence has been detected, but it is not known whether this is the case or not.
+
+## Choosing The Profit Row
 
 The pivot row is the row of the basic variable that is going to leave the set of basic variables. The pivot column decides the non-basic variable that is going to enter the set of basic variables, and this determines the direction that the point is going to move along. When we move along this direction, we will intersect with the other constraints at various points as we go, and we want to stop at the first constraint so we do not leave the feasible region. To do this, we compute a value we call theta for each of the basic variables (rows of the tableau)
 
@@ -111,7 +112,7 @@ Pivot    0  0   0   0
 column  +1  1   1   0
         -1  0   0   1
 
-#################### CONVERGENCE AND NON-UNIQUENESS ####################
+## Convergence and Non-Uniqueness
 
 If any of the points have all non-negative entries in the profit row then the problem has converged. This follows from the strict convexity of x^T x, and it will also be the case that all other points will have all non-negative entries in the profit row. This fits nicely with the optimality conditions of the simplex algorithm, and it is also consistent with the fact that choosing a pivot column for such a point is now undefined.
 
@@ -119,7 +120,7 @@ Convergence does not imply that all points have merged into one. It is possible 
 
 We conjecture that the algorithm will show multiple optimal points if and only if they are adjacent to each other, that is, connected by single constraint. This is similar to non-uniqueness for the simplex algorithm where if the intersection of constraints forms a facet that overlaps with the objective function then all points within the facet are optimal points (this set is convex). The algorithm can have points that lie on optimal points but it does not necessarily terminate and can continue iterating.
 
-#################### DISCUSSION ON DEGENERATIVE SITUATIONS ####################
+## Discussion of Degenerative Situations
 
 Suppose at the start of the algorithm there are several constraints that pass through the origin. In this case the first step of the algorithm will choose one of the points that is constrained by one of those constraints and update it's basic and non-basic variables. Spatially nothing has happened however, and it seems that some of the next stages may be poorly defined. In this section we describe what happens in this situation.
 
@@ -131,7 +132,7 @@ In the first step of the algorithm, point Y is chosen as the first point to be u
 
 The objective function would have been initialised as P = x + y, so point Y will be chosen to increase along the y <= 0 constraint. Both points are now at the origin and moving towards the right - these are exactly our conditions for points to have converged to each other, so one of the points can be deleted. We now have 1 point left and the computed objective function will have it's normal given by the coordinates of that point. The algorithm will terminate on the next step at (1, 0).
 
-################### LINEAR ALGEBRA IMPLEMENTATION OF SIMPLEX ###################
+## Linear Algebra Implementation of Simplex
 
 Once the slack variables are added we have a system of equations, Ax = b. We can write x_B and x_N have components equal to the basic and non-basic variables respectively. Similarly we define the matrices A_B and A_N which have the columns of the indices of the basic and non-basic variables respectively. In these new variables the system Ax = b turns into A_B x_B + A_N x_N = b, and similarly the objective function can be written as c_B^T x_B + c_N^T x_N.
 
@@ -146,7 +147,7 @@ The tableau is x_B = A_B^-1 b - A_B^-1 A_N x_N. The components of x_N are 0, so 
 
 Similarly we can extract information from the profit row. The profit is given by c_B^T A_B^-1 b, and we note that this is the same as finding the dot product of c_B with the values of the basic variables found above. c_N^T - c_B^T A_B^-1 A_N gives the non-basic values in the profit row. Taking the tranpose of this gives c_N - A_N^T A_B^-T c_B. We can find the value of A_B^-T c_B by solving the linear system A_B^T v = c_B, and then substitute this in to find the profit row. We note that once the LU factorisation of A has been found, the LU factorisation of A^T is also given as A^T = (LU)^T = U^T L^T and U^T, L^T are lower and upper triangular matrices respectively.
 
-##################### DETERMINING UNIQUENESS OF SOLUTIONS #####################
+## Determining Uniqueness of Solutions
 
 If we have a quadratic programming problem to maximise x^T x subject to Ax <= b then we can construct a new quadratic programming problem that tells us whether the solution is unique. We attempt to solve two problems at once while also maximising the different between them.
 

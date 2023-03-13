@@ -17,7 +17,7 @@ class QuadraticSimplex():
     For more details on the algorithm, implementation, and formulation
     of quadratic problems into this form see the README document. """
 
-    option_plot_state = True
+    option_plot_state = False
 
     def __init__(self, constraint_matrix, constraint_vector):
         self.constraint_matrix = constraint_matrix
@@ -64,9 +64,11 @@ class QuadraticSimplex():
 
     def solve(self):
         while self.solved_status == "Unsolved":
+            self.output_tableaux()
             self.iterate()
             self.output_profit()
             self.plot_obj.plot()
+            input()
         print("Solved!")
 
     def iterate(self):
@@ -79,6 +81,7 @@ class QuadraticSimplex():
     def set_lines_of_movement(self):
         for tableau in self.tableaux:
             tableau.set_line_of_movement()
+            tableau
 
     def merge_any_converged_pairs(self):
         for tableau_index_1 in range(len(self.tableaux)):
@@ -111,6 +114,7 @@ class QuadraticSimplex():
     def set_updating_tableau(self):
         potential_profit_list = [tableau.get_potential_profit()
                                  for tableau in self.tableaux]
+        print(f"Potential profit list: {potential_profit_list}\n")
         updating_dimension = np.argmin(potential_profit_list)
         self.updating_tableau = self.tableaux[updating_dimension]
 
@@ -182,7 +186,7 @@ class QuadraticSimplex():
                   f"Solved status: {self.solved_status}/n")
         return string
 
-
+"""
 constraint_matrix = np.array([[3, 2],
                               [-12, 13],
                               [1, -3],
@@ -194,7 +198,7 @@ constraint_matrix = np.array([[-3, 1],
                               [1, -3],
                               [9, 8]])
 constraint_vector = np.array([3, 90, 2, 180])
-
+"""
 constraint_matrix = np.array([[-0.9, 1],
                               [1.1, -1],
                               [1, 1],
@@ -208,3 +212,4 @@ constraint_vector = np.array([1, 0])
 
 problem = QuadraticSimplex(constraint_matrix, constraint_vector)
 problem.solve()
+    
