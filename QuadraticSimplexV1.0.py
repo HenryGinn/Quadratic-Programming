@@ -17,7 +17,7 @@ class QuadraticSimplex():
     For more details on the algorithm, implementation, and formulation
     of quadratic problems into this form see the README document. """
 
-    option_plot_state = False
+    option_plot_state = True
 
     def __init__(self, constraint_matrix, constraint_vector):
         self.constraint_matrix = constraint_matrix
@@ -64,11 +64,11 @@ class QuadraticSimplex():
 
     def solve(self):
         while self.solved_status == "Unsolved":
-            self.output_tableaux()
             self.iterate()
+            self.output_tableaux()
             self.output_profit()
             self.plot_obj.plot()
-            input()
+            #input()
         print("Solved!")
 
     def iterate(self):

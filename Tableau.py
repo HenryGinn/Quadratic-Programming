@@ -164,8 +164,19 @@ class Tableau():
 
     def set_pivot_column_index(self):
         self.pivot_column_index = np.argmax(self.profit_row)
-        print(f"Pivot column index: {self.pivot_column_index}")
-        print(f"Profit row: {self.profit_row}\n")
+        print(self.pivot_column_index)
+        self.set_pivot_column_index_to_dimension()
+        print(self.pivot_column_index)
+        print(self.profit_row, self.dimension)
+        self.check_if_problem_solved()
+
+    def set_pivot_column_index_to_dimension(self):
+        if self.dimension in self.non_basic_variables:
+            dimension_index = np.where(self.non_basic_variables == self.dimension)[0][0]
+            if self.profit_row[dimension_index] > -0.0001:
+                self.pivot_column_index = dimension_index
+
+    def check_if_problem_solved(self):
         if self.profit_row[self.pivot_column_index] <= 0.0001:
             self.global_problem.solved_status = "Optimal"
 
@@ -176,7 +187,6 @@ class Tableau():
     def set_line_of_movement(self):
         self.line_reference_vector = self.get_line_reference_vector()
         self.set_line_direction_vector()
-        self.output_line_of_movement()
         
     def get_line_reference_vector(self):
         reference_vector = np.array([self.get_spatial_variable_value(dimension)
