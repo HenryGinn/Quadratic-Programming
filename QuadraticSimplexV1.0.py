@@ -65,10 +65,9 @@ class QuadraticSimplex():
     def solve(self):
         while self.solved_status == "Unsolved":
             self.iterate()
-            self.output_tableaux()
+            #self.output_tableaux()
             self.output_profit()
-            #self.plot_obj.plot()
-            input()
+            self.plot_obj.plot()
         print("Solved!")
 
     def iterate(self):
@@ -114,7 +113,6 @@ class QuadraticSimplex():
     def set_updating_tableau(self):
         potential_profit_list = [tableau.get_potential_profit()
                                  for tableau in self.tableaux]
-        print(f"Potential profit list: {potential_profit_list}\n")
         updating_dimension = np.argmin(potential_profit_list)
         self.updating_tableau = self.tableaux[updating_dimension]
 
@@ -143,15 +141,28 @@ class QuadraticSimplex():
                 tableau.partial_position = self.updating_tableau.get_vertex_position()
 
     def compute_profit_vector(self):
-        positions = np.vstack([tableau.partial_position for tableau in self.tableaux])
-        positions_transpose = np.transpose(positions)
-        gram_matrix = np.matmul(positions, positions_transpose)
-        intermediate_vector = sc.linalg.solve(gram_matrix, np.ones(len(self.tableaux)))
+        positions_transpose, gram_matrix = self.get_positions_transpose_and_gram_matrix()
+        intermediate_vector = sc.linalg.solve(gram_matrix, np.ones(positions_transpose.shape[1]))
         profit_normal = np.dot(positions_transpose, intermediate_vector)
         self.set_profit_vector(profit_normal)
 
+    def get_positions_transpose_and_gram_matrix(self):
+        positions = self.get_positions_no_repeats()
+        positions_transpose = np.transpose(positions)
+        gram_matrix = np.matmul(positions, positions_transpose)
+        return positions_transpose, gram_matrix
+
+    def get_positions_no_repeats(self):
+        positions = np.vstack([tableau.partial_position for tableau in self.tableaux])
+        positions_rounded = np.round(positions, 6)
+        positions_rounded, unique_indices = np.unique(positions_rounded, axis=0, return_index=True)
+        positions = positions[unique_indices]
+        return positions
+
     def update_pivot_columns(self):
         for tableau in self.tableaux:
+            tableau.set_column_filtered_arrays()
+            tableau.set_profit_row()
             tableau.set_pivot_column_index()
 
     def update_updating_tableau(self):
@@ -192,7 +203,7 @@ constraint_matrix = np.array([[3, 2],
                               [1, -3],
                               [6, 5]])
 constraint_vector = np.array([55, 13, 2, 120])
-"""
+
 constraint_matrix = np.array([[-3, 1],
                               [3, 5],
                               [1, -3],
@@ -204,7 +215,7 @@ constraint_matrix = np.array([[-0.9, 1],
                               [1, 1],
                               [1, 1.01]])
 constraint_vector = np.array([5, 5, 20, 20.1])
-
+"""
 constraint_matrix = np.array([[1, 0],
                               [0, 1]])
 constraint_vector = np.array([1, 0])

@@ -242,10 +242,10 @@ A = np.array([[-3, 1],
               [1, -3],
               [9, 8]])
 b = np.array([3, 90, 2, 180])
-c = np.array([0.05006136, 0.05105877])
+c = np.array([0.05561337, 0.0407022])
 B = np.array([1, 0, 4, 2])
 
 prob = LinearProblem(A, b, c, B)
 prob.display()
-#prob.solve()
-#prob.output()
+prob.solve()
+prob.output()

@@ -74,11 +74,11 @@ Iteration:
 1. Determine which point is going to be updated by finding which one increases the quadratic profit the least if it were to be moved to it's next vertex.
 1. Update the basic and non-basic variables of the chosen point.
     - If the point moved
-        Compute partial positions of all points
-        Compute new linear objective function
-        Update all pivot columns
+        - Compute partial positions of all points
+        - Compute new linear objective function
+        - Update all pivot columns
     - If the point didn't move
-    	Update pivot column of updated point
+    	- Update pivot column of updated point
 
 ## Computation of New Linear Profit Function
 
@@ -94,7 +94,7 @@ We can write the line as r = v_1 + s*v_2 where v_1 and v_2 are the position and 
 
 ### Defining The Hyperplane
 
-In an N dimensional space, a hyperplane has dimension N-1. All hyperplanes can be described by a linear combination of spatial variables equalling a constant. For each of the n points in our n dimensional space, we need them to lie in the hyperplane, i.e. satisfy the equation. We can describe this system of linear equations with a matrix. If a pair of points are equal then the system will be underdefined - this is the situation where the hyperplane spans fewer than n-1 dimensions and has become degenerate. This is not a problem and is in fact expected when the algorithm converges. We can solve the system using the pseudoinverse. Without loss of generality we choose the constant of the hyperplane to be 1 for the purposes of finding the hyperplane, all this does is fix a scaling for the linear combination. As the matrix is never overdetermined we can always solve this system. The pseudoinverse is given by $A^+ = A^T (A A^T)^{-1}$ which means the system we need to solve is ${v = A^+ 1 = A^T (A A^T)^{-1} 1}$. If we set ${w = (A A^T)^{-1} 1}$ then $w$ is the solution to ${(A A^T) 1}$, and we have ${v = A^T w}$.
+In an $N$ dimensional space, a hyperplane has dimension $N-1$. All hyperplanes can be described by a linear combination of spatial variables equalling a constant. We need to find a hyperplane that passes through all of our points, i.e. each of the points satisfy the hyerplane equation. Each point gives a linear equations, and we can describe this system with a matrix. Once points have merged together or their potential positions are the same, then the system will be underdefined - this is the situation where the hyperplane spans fewer than $n-1$ dimensions and has become degenerate. We remove any duplicate potential positions, and solve the system using the pseudoinverse. As we have $n$ degrees of freedom and may have fewer than $n$ equations, using the pseudoinverse corresponds to choosing one of the hyperplanes that works. Without loss of generality we choose the constant of the hyperplane to be 1 for the purposes of finding the hyperplane, as all this does is fix a scaling for the linear combination. As the matrix is never overdetermined we can always solve this system, although we need to ensure that all the points defining the hyperplane are distinct. The pseudoinverse is given by $A^+ = A^T (A A^T)^{-1}$ which means the system we need to solve is ${v = A^+ 1 = A^T (A A^T)^{-1} 1}$. If we set ${w = (A A^T)^{-1} 1}$ then $w$ is the solution to ${(A A^T) 1}$, and we have ${v = A^T w}$.
 
 We note that we will also have a lower rank matrix if there exist triples of colinear points. We expect that this should not happen if the points have been properly merged once convergence has been detected, but it is not known whether this is the case or not.
 
@@ -126,7 +126,7 @@ Suppose at the start of the algorithm there are several constraints that pass th
 
 If no points have changed location, a new objective function does not need to be found. The only difference has happened under the hood via a change in basic and non-basic variables, so it makes sense that we use the same objective function in the next iteration as geometrically nothing has changed.
 
-We consider the 2D problem where we have $x \le 1$, $y \le 0$ and non-negativity constraints. The $y \le 0$ constraint effectively reduces this problem into 1 dimension, so we expect the algorithm to realise this and merge the two points into one. We will refer to the points moving in the $x$ and $$ directions as point $X$ and point $Y$ respectively.
+We consider the 2D problem where we have $x \le 1$, $y \le 0$ and non-negativity constraints. The $y \le 0$ constraint effectively reduces this problem into 1 dimension, so we expect the algorithm to realise this and merge the two points into one. We will refer to the points moving in the $x$ and $y$ directions as point $X$ and point $Y$ respectively.
 
 In the first step of the algorithm, point $Y$ is chosen as the first point to be updated as the most it can move is 0 before hitting a constraint. It's basic and non-basic variables update, and as no change has been made spatially, we keep the same objective function. As we have the same objective function, we do not need to update the direction of point $X$, and we only need to choose a new direction for point $Y$.
 

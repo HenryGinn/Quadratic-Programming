@@ -6,8 +6,8 @@ class PlotState():
 
     x_min = -1
     y_min = -1
-    x_max = 17
-    y_max = 17
+    x_max = 13
+    y_max = 13
 
     def __init__(self, problem):
         self.problem = problem
@@ -85,4 +85,3 @@ class PlotState():
         plt.title("Quadratic Programming Algorithm", fontsize = 20)
         plt.xlabel("x", fontsize = 15)
         plt.ylabel("y", fontsize = 15)
-
