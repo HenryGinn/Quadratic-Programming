@@ -67,8 +67,8 @@ class QuadraticSimplex():
             self.iterate()
             self.output_tableaux()
             self.output_profit()
-            self.plot_obj.plot()
-            #input()
+            #self.plot_obj.plot()
+            input()
         print("Solved!")
 
     def iterate(self):

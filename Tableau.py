@@ -79,7 +79,7 @@ class Tableau():
 
     def set_profit_row(self):
         intermediate_vector = sc_la.lu_solve((self.A_basic_LU, self.A_permute),
-                                                 self.c_basic, trans = 1)
+                                             self.c_basic, trans = 1)
         self.profit_row = self.c_non_basic - np.dot(np.transpose(self.A_non_basic),
                                                     intermediate_vector)
 
@@ -128,7 +128,6 @@ class Tableau():
     def compute_potential_profit(self):
         self.pivot_value = self.pivot_column[self.pivot_row_index]
         potential_values = self.get_potential_values()
-        print(f"Potential values: {potential_values}\n")
         potential_profit = math.sqrt(sum(np.array(potential_values)**2))
         return potential_profit
 
@@ -164,10 +163,7 @@ class Tableau():
 
     def set_pivot_column_index(self):
         self.pivot_column_index = np.argmax(self.profit_row)
-        print(self.pivot_column_index)
         self.set_pivot_column_index_to_dimension()
-        print(self.pivot_column_index)
-        print(self.profit_row, self.dimension)
         self.check_if_problem_solved()
 
     def set_pivot_column_index_to_dimension(self):
