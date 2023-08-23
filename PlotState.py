@@ -6,8 +6,8 @@ class PlotState():
 
     x_min = -1
     y_min = -1
-    x_max = 13
-    y_max = 13
+    x_max = 17
+    y_max = 17
 
     def __init__(self, problem):
         self.problem = problem
