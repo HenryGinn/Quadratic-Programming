@@ -66,7 +66,7 @@ class QuadraticSimplex():
     def solve(self):
         while self.solved_status == "Unsolved":
             self.iterate()
-            #self.output_tableaux()
+            self.output_partial_positions()
             self.output_profit()
             self.plot_obj.plot()
         print("Solved!")
@@ -121,8 +121,7 @@ class QuadraticSimplex():
         self.set_profit()
         if abs(old_profit - self.profit) > 0.0001:
             self.update_tableaux()
-        else:
-            self.update_updating_tableau()
+        self.updating_tableau.set_pivot_column_index()
 
     def set_profit(self):
         updating_tableau_vertex_position = self.updating_tableau.get_vertex_position()
@@ -163,10 +162,7 @@ class QuadraticSimplex():
         for tableau in self.tableaux:
             tableau.set_column_filtered_arrays()
             tableau.set_profit_row()
-            tableau.set_pivot_column_index()
-
-    def update_updating_tableau(self):
-        self.updating_tableau.set_pivot_column_index()
+            #tableau.set_pivot_column_index()
 
     def output_problem_constraints(self):
         print("Problem constraints")
@@ -195,7 +191,6 @@ class QuadraticSimplex():
             self.plot_obj = PlotState3D(self)
         else:
             self.plot_obj = PlotState(self)
-            
 
     def __str__(self):
         string = (f"Space dimensions: {self.space_dimensions}\n"
@@ -224,22 +219,38 @@ constraint_matrix = np.array([[-0.9, 1],
                               [1, 1.01]])
 constraint_vector = np.array([5, 5, 20, 20.1])
 
-constraint_matrix = np.array([[3, -1, 6],
-                              [2, 5, 1],
-                              [4, 1, 1],
-                              [-3, 1, 3]])
-constraint_vector = np.array([4, 4, 3, 2])
+constraint_matrix = np.array([[-6, 1],
+                              [1, 2],
+                              [7, 4]])
+constraint_vector = np.array([3, 20, 70])
 
-constraint_matrix = np.array([[1, 3],
-                              [2, 1]])
-constraint_vector = np.array([30, 15])
+constraint_matrix = np.array([[-1, 4],
+                              [6, 5],
+                              [7, 1],
+                              [5, 2]])
+constraint_vector = np.array([26, 76, 70, 53])
+
+constraint_matrix = np.array([[-1, 0, 0],
+                              [0, -1, 0],
+                              [0, 0, -1],
+                              [2, -1, 6],
+                              [-2, 5, 1],
+                              [4, 1, 1],
+                              [0, 1, -1],
+                              [2, 4, 1]])
+constraint_vector = np.array([0, 0, 0, 4, 3, 3, 0.3, 3.4])
 """
-constraint_matrix = np.array([[3, -1, 6],
-                              [2, 5, 1],
-                              [4, 1, 1],
-                              [-3, 1, 3]])
-constraint_vector = np.array([4, 4, 3, 2])
 
+N = 30
+constraint_matrix = np.random.rand(N, 3)
+constraint_matrix = constraint_matrix / np.linalg.norm(constraint_matrix, axis=1).reshape(N, 1)
+print(constraint_matrix)
+constraint_vector = np.random.rand(N)/3 + 0.7
+print([list(i) for i in constraint_matrix])
+print(list(constraint_vector))
+
+#constraint_matrix = np.array([[2.926413872904681, 1.0847136814905383, 2.65372612696535], [1.010047566777689, 2.2462791285252677, 4.748971112601782], [4.798545379569625, 4.14918950180408, 1.3388303955334109], [3.082590600500611, 1.5090858187033056, 2.91709850939197], [3.272392402726407, 3.5066551643852395, 2.9176255867916283], [4.542156829387358, 3.556880418542365, 2.7985613655952033], [4.82038049991272, 1.257160247519029, 2.7119642579623435], [2.063304757871728, 3.955695578334879, 4.499038258378556], [4.309610027165567, 1.8911312122481907, 3.332005858908505], [3.6642966882466763, 1.0340221019201734, 2.1394287780346373], [1.014851808220519, 1.8168807108465514, 3.883964328563588], [1.0559007000964027, 1.701933005629093, 4.9182826704414655], [3.883308942682502, 3.805996296633884, 2.9713313483087926], [4.167135051945373, 1.8823515631981191, 1.516354493069138], [2.852462996322677, 4.47342716872487, 4.429356606112812], [2.0435177959479778, 1.3166593284856787, 1.7619991173755853], [2.967224091911079, 3.0903950572718277, 4.895934907903739], [2.966119422928603, 1.220940718855811, 4.356514199778456], [1.177340038021614, 4.463210521642405, 3.985493024379138], [2.684144746994798, 2.733646245071985, 3.7058208425984627], [5.038398927463475, 1.1763802476707526, 2.8907840845239794], [2.0141341956261236, 4.77849852577405, 2.8141825819117674], [4.471137237795851, 1.264758628504437, 1.0020975614116265], [3.9588226684345815, 2.83760546665806, 1.3290827434035477], [1.0745909977812547, 2.335077628973479, 1.8245336446131963], [1.8212198773994328, 4.421940329194557, 1.9705922281590664], [3.283927278525925, 4.718921989637628, 1.0012380509096905], [3.5817659713503645, 1.278798480789799, 3.85579045842465], [2.8182982420802043, 2.4807610347562536, 5.024702882471913], [4.6598919682507045, 2.3824918019147843, 4.465548809483165]])
+#constraint_vector = np.array([4.005876511974748, 4.5601698553771435, 4.892958745505702, 4.6515505987598615, 4.572133578580334, 4.22227557784988, 4.2294811157263865, 4.260472871923132, 4.504618693247361, 4.323804367613552, 4.7004356148818625, 4.941191362557812, 4.655570286406181, 4.726885287084638, 4.0098422750508265, 4.859185624508852, 4.111818181259705, 4.426269329620348, 4.568103811718706, 4.658405651228994, 4.551612721515293, 4.64463158692862, 4.696130121097248, 4.21398616987616, 4.105247533779582, 4.425841631305803, 4.9091435812852815, 4.633946559576172, 4.881592837256371, 4.992296003219178])
 
 problem = QuadraticSimplex(constraint_matrix, constraint_vector)
 problem.solve()

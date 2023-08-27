@@ -228,12 +228,17 @@ class Tableau():
         return reference_abs, direction_abs, cross_term
 
     def get_position_parameters(self, reference_abs, direction_abs, cross_term):
-        discriminant = math.sqrt(cross_term**2
-                                 - reference_abs * direction_abs
-                                 + direction_abs * self.global_problem.profit**2)
+        discriminant = self.get_discriminant(reference_abs, direction_abs, cross_term)
         position_parameter_plus = (-1*cross_term + discriminant) / direction_abs
         position_parameter_minus = (-1*cross_term - discriminant) / direction_abs
         return (position_parameter_plus, position_parameter_minus)
+
+    def get_discriminant(self, reference_abs, direction_abs, cross_term):
+        discriminant = (cross_term**2
+                        - reference_abs * direction_abs
+                        + direction_abs * self.global_problem.profit**2)
+        discriminant = math.sqrt(discriminant)
+        return discriminant
 
     def get_positions(self, position_parameters):
         position_parameter_plus, position_parameter_minus = position_parameters

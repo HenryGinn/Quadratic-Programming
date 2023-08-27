@@ -28,7 +28,7 @@ class PlotState3D():
     def setup_plot(self):
         self.setup_axes()
         self.set_axis_limits()
-        self.remove_axis_details()
+        self.set_axis_details()
 
     def setup_axes(self):
         self.fig = plt.figure(figsize=(20, 15))
@@ -42,16 +42,19 @@ class PlotState3D():
         self.ax.set_ylim3d([0, self.plot_size])
         self.ax.set_zlim3d([0, self.plot_size])
 
-    def remove_axis_details(self):
+    def set_axis_details(self):
+        self.ax.set_xlabel("x")
+        self.ax.set_ylabel("y")
+        self.ax.set_zlabel("z")
         blank = (1, 1, 1, 0)
-        self.ax.xaxis.line.set_color(blank)
-        self.ax.yaxis.line.set_color(blank)
-        self.ax.zaxis.line.set_color(blank)
-        self.ax.tick_params(color=blank, labelcolor=blank)
+        #self.ax.xaxis.line.set_color(blank)
+        #self.ax.yaxis.line.set_color(blank)
+        #self.ax.zaxis.line.set_color(blank)
+        #self.ax.tick_params(color=blank, labelcolor=blank)
 
     def draw_state_components(self):
         self.draw_polytopes()
-        self.draw_quadratic_objective_function()
+        #self.draw_quadratic_objective_function()
         self.draw_nodes()
 
     def draw_polytopes(self):
@@ -68,7 +71,8 @@ class PlotState3D():
         matrix_upper = np.concatenate((self.matrix,
                                        -1 * np.array([self.problem.profit_vector[:3]])))
         limits_upper = np.concatenate((self.limits, np.array([-1])))
-        Poly(matrix_upper, limits_upper, self.ax, zorder=4).plot_polytope()
+        Poly(matrix_upper, limits_upper, self.ax, zorder=4,
+             facecolors="blueviolet", edgecolors="black", alpha=0.3).plot_polytope()
 
     def draw_quadratic_objective_function(self):
         r = self.problem.profit
